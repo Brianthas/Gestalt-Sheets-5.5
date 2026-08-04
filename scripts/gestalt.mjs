@@ -224,6 +224,15 @@ function onUpdateClassItem(item, changes, options, userId) {
   const levelChanged = foundry.utils.getProperty(changes, "system.levels") !== undefined;
 
   if (levelChanged) {
+    // TEMPORARY diagnostic logging for a reported bug where the sibling-class reminder appears to
+    // name the class that just leveled instead of an actual sibling. Remove once root-caused.
+    console.debug(`${MODULE_ID} | class level change`, {
+      triggeringItem: { name: item.name, id: item.id, levels: item.system.levels },
+      changes: foundry.utils.deepClone(changes),
+      allClasses: actor.items.filter(i => i.type === "class")
+        .map(i => ({ name: i.name, id: i.id, levels: i.system.levels }))
+    });
+
     // Only classes actually behind the one that just leveled - not every other class unconditionally,
     // which used to fire even when a class had just caught up to parity with the rest (nothing left to
     // "not forget" at that point).
