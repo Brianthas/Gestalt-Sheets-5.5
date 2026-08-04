@@ -226,7 +226,7 @@ function onUpdateClassItem(item, changes, options, userId) {
   if (levelChanged) {
     // TEMPORARY diagnostic logging for a reported bug where the sibling-class reminder appears to
     // name the class that just leveled instead of an actual sibling. Remove once root-caused.
-    console.debug(`${MODULE_ID} | class level change`, {
+    console.warn(`${MODULE_ID} | class level change`, {
       triggeringItem: { name: item.name, id: item.id, levels: item.system.levels },
       changes: foundry.utils.deepClone(changes),
       allClasses: actor.items.filter(i => i.type === "class")
