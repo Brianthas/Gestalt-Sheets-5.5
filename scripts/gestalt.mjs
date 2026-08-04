@@ -16,7 +16,40 @@ const GESTALT_FLAG = {
 /*  Setup                                       */
 /* -------------------------------------------- */
 
+/**
+ * Register a libWrapper patch defensively. This module leans on several fairly deep, undocumented
+ * dnd5e internals (Advancement class prototypes, CONFIG.Actor.dataModels) that a future dnd5e update
+ * could rename or restructure. Without this, a single broken target would throw inside the `init` hook
+ * and silently prevent every *later* `libWrapper.register` call in the same callback from running too -
+ * one dnd5e refactor could quietly take out the entire module instead of just the affected feature.
+ * Failing loudly per-patch means the GM finds out exactly what broke instead of guessing why gestalt
+ * stopped working after a system update.
+ * @param {string} target
+ * @param {Function} fn
+ * @param {string} type
+ */
+function registerLibWrapper(target, fn, type) {
+  try {
+    libWrapper.register(MODULE_ID, target, fn, type);
+  } catch (err) {
+    console.error(
+      `${MODULE_ID} | Failed to patch "${target}". The dnd5e system may have changed something this `
+      + "module depends on - some gestalt features will not work until the module is updated.", err
+    );
+    ui.notifications?.error(
+      `Gestalt Sheets 5.5 failed to patch dnd5e (${target}). Some gestalt features may not work `
+      + "correctly - check the console (F12) and consider reporting this on the module's GitHub issues.",
+      { permanent: true }
+    );
+  }
+}
+
 Hooks.once("init", () => {
+  if (!CONFIG.DND5E) {
+    console.error(`${MODULE_ID} | The dnd5e system is not active. This module requires it and will not function.`);
+    return;
+  }
+
   game.settings.register(MODULE_ID, "moduleEnabled", {
     name: "GESTALT.Settings.ModuleEnabled.Name",
     hint: "GESTALT.Settings.ModuleEnabled.Hint",
@@ -42,20 +75,25 @@ Hooks.once("init", () => {
 
   if (!game.modules.get("lib-wrapper")?.active) {
     console.error(`${MODULE_ID} | The "libWrapper" module is required but is not active.`);
+    ui.notifications?.error(
+      "Gestalt Sheets 5.5 requires the \"libWrapper\" module to be installed and active. "
+      + "Gestalt features will not work until it is enabled.",
+      { permanent: true }
+    );
     return;
   }
 
-  libWrapper.register(MODULE_ID, "CONFIG.Actor.dataModels.character.prototype.prepareBaseData", function(wrapped, ...args) {
+  registerLibWrapper("CONFIG.Actor.dataModels.character.prototype.prepareBaseData", function(wrapped, ...args) {
     wrapped(...args);
     applyGestaltLevel(this);
   }, "WRAPPER");
 
-  libWrapper.register(MODULE_ID, "CONFIG.Actor.dataModels.character.prototype.prepareDerivedData", function(wrapped, ...args) {
+  registerLibWrapper("CONFIG.Actor.dataModels.character.prototype.prepareDerivedData", function(wrapped, ...args) {
     wrapped(...args);
     applyGestaltHitPoints(this);
   }, "WRAPPER");
 
-  libWrapper.register(MODULE_ID, "dnd5e.documents.advancement.Advancement.prototype.appliesToClass", function(wrapped) {
+  registerLibWrapper("dnd5e.documents.advancement.Advancement.prototype.appliesToClass", function(wrapped) {
     if (isProficiencyUnlockAdvancement(this) && isGestaltActor(this.actor)) return true;
     return wrapped();
   }, "MIXED");
