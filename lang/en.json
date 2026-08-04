@@ -2,6 +2,13 @@
   "GESTALT.ModuleName": "Gestalt Sheets 5.5",
   "GESTALT.EnableGestalt": "Enable Gestalt",
   "GESTALT.SelectBaseClass": "Select base class...",
+  "GESTALT.CombinedAsi": "Use Combined Class ASIs",
   "GESTALT.Settings.ModuleEnabled.Name": "Enable Gestalt Sheets",
-  "GESTALT.Settings.ModuleEnabled.Hint": "Master switch for this world. When off, no actor is affected even if gestalt is enabled on their sheet."
+  "GESTALT.Settings.ModuleEnabled.Hint": "Master switch for this world. When off, no actor is affected even if gestalt is enabled on their sheet.",
+  "GESTALT.Settings.LimitSkills.Name": "Limit Skill Choices",
+  "GESTALT.Settings.LimitSkills.Hint": "For gestalt actors, warn if they've chosen more class-granted skill proficiencies than their most generous single class allows (e.g. Rogue's 4 vs Bard's 3), instead of silently allowing skills from every class.",
+  "GESTALT.LevelUpReminder": "Gestalt: don't forget your other classes - {classes}",
+  "GESTALT.LevelExceedsBase": "Gestalt: {classes} is now higher level than your base class, {base}",
+  "GESTALT.AsiRedundant": "Gestalt: {name}'s {secondary} just reached an Ability Score Improvement, but base class {base} already has one at this point. Check \"Use Combined Class ASIs\" if you want to allow it.",
+  "GESTALT.SkillsOverCap": "Gestalt: {name} has chosen {taken} class skill proficiencies, but their schedule only allows {cap}. Consider removing one."
 }
