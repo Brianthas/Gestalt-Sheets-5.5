@@ -1,7 +1,7 @@
 {
   "GESTALT.ModuleName": "Gestalt Sheets 5.5",
   "GESTALT.EnableGestalt": "Enable Gestalt",
-  "GESTALT.EnableGestaltHint": "Treat this character as a gestalt: effective level, proficiency bonus, and hit points follow the \"Original Class\" above instead of the sum of all classes.",
+  "GESTALT.EnableGestaltHint": "Replaces standard multiclassing for this character - not layered on top of it. Effective level, proficiency bonus, and hit points follow the \"Original Class\" above instead of the sum of all classes, and every class gets full saves/skills/proficiencies instead of diluted multiclass ones.",
   "GESTALT.CombinedAsi": "Use Combined Class ASIs",
   "GESTALT.CombinedAsiHint": "Only relevant if Enable Gestalt is checked. Allows this character to take Ability Score Improvements from every class independently (normal multiclassing) without a redundancy warning.",
   "GESTALT.Settings.ModuleEnabled.Name": "Enable Gestalt Sheets",

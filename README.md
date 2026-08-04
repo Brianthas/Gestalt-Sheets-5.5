@@ -4,6 +4,14 @@ A [Foundry VTT](https://foundryvtt.com/) module for the [dnd5e](https://github.c
 
 For example, a Bard 5 / Paladin 5 gestalt character has the features of a level 5 Bard *and* a level 5 Paladin, but is treated as a level 5 character overall (proficiency bonus, spell slot progression, etc.) rather than a level 10 multiclass character.
 
+**Gestalt replaces dnd5e's standard multiclassing rules for that character - it isn't layered on top of
+them.** With Enable Gestalt checked, every class on the sheet is treated under gestalt rules (proficiency
+bonus/tier/HP from the best class, full saves/skills/weapon/armor proficiencies from every class, ASI
+overlap checking, etc.), not standard multiclass rules (summed effective level, one class's worth of
+saves, diluted proficiencies). Don't expect a character to be "gestalt for two of its classes and normal
+multiclass for a third" - if Enable Gestalt is on, none of that character's classes use standard
+multiclassing math anymore.
+
 ## Installation
 
 Requires the [libWrapper](https://foundryvtt.com/packages/lib-wrapper) module.
