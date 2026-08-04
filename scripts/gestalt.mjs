@@ -206,6 +206,28 @@ function getGestaltAdjustedHpTotal(hpAdvancement, mod) {
 /* -------------------------------------------- */
 
 /**
+ * In-memory cache of each class item's last-known level, keyed by item ID. Needed because dnd5e's
+ * Advancement Manager operates on a full cloned copy of the actor throughout its wizard, and commits
+ * the result via a *bulk* `updateEmbeddedDocuments` call that can include an unrelated sibling class's
+ * `system.levels` in the update payload even when that class's value never actually changed (confirmed
+ * via diagnostic logging: leveling a newly-added Warlock produced an `updateItem` event whose actual
+ * triggering item was the unrelated, unchanged Sorcerer). `changes.system.levels !== undefined` alone
+ * can't distinguish "genuinely changed" from "included in a batch write but identical," so this compares
+ * against the last level we actually observed for that specific item instead.
+ * @type {Map<string, number>}
+ */
+const lastKnownClassLevels = new Map();
+
+Hooks.once("ready", () => {
+  for (const actor of game.actors) {
+    if (!isGestaltActor(actor)) continue;
+    for (const item of actor.items) {
+      if (item.type === "class") lastKnownClassLevels.set(item.id, item.system.levels);
+    }
+  }
+});
+
+/**
  * When a class item's level changes on a gestalt actor, remind the acting user about the actor's
  * other classes so features don't get missed, and warn if a non-base class has drifted past the
  * base class's level. Notification-only: nothing here blocks or auto-triggers advancement.
@@ -221,18 +243,12 @@ function onUpdateClassItem(item, changes, options, userId) {
   const actor = item.actor;
   if (!isGestaltActor(actor)) return;
 
-  const levelChanged = foundry.utils.getProperty(changes, "system.levels") !== undefined;
+  const previousLevel = lastKnownClassLevels.get(item.id);
+  lastKnownClassLevels.set(item.id, item.system.levels);
+  const levelChanged = foundry.utils.getProperty(changes, "system.levels") !== undefined
+    && previousLevel !== undefined && previousLevel !== item.system.levels;
 
   if (levelChanged) {
-    // TEMPORARY diagnostic logging for a reported bug where the sibling-class reminder appears to
-    // name the class that just leveled instead of an actual sibling. Remove once root-caused.
-    console.warn(`${MODULE_ID} | class level change`, {
-      triggeringItem: { name: item.name, id: item.id, levels: item.system.levels },
-      changes: foundry.utils.deepClone(changes),
-      allClasses: actor.items.filter(i => i.type === "class")
-        .map(i => ({ name: i.name, id: i.id, levels: i.system.levels }))
-    });
-
     // Only classes actually behind the one that just leveled - not every other class unconditionally,
     // which used to fire even when a class had just caught up to parity with the rest (nothing left to
     // "not forget" at that point).

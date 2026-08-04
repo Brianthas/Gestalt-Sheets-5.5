@@ -99,6 +99,16 @@ already even with each other - e.g. bringing a newly-added second class up to pa
 doesn't trigger a reminder, since there's nothing left to catch up on at that point. These are
 notifications only - nothing is blocked or auto-triggered.
 
+Detecting a "real" level change is deliberately stricter than just checking whether `system.levels` was
+part of an update: dnd5e's Advancement Manager finalizes a leveling operation by committing a full cloned
+copy of the actor via a bulk `updateEmbeddedDocuments` call, which can include an unrelated sibling
+class's `system.levels` in that payload even when its value never actually changed - confirmed via
+diagnostic logging, where leveling a newly-added class produced an update event whose "changed" item was
+actually a completely different, unchanged class. Left unhandled, this could misfire a reminder naming
+the wrong class. The module tracks each class's last-known level itself and only treats it as a genuine
+change if the value actually differs, rather than trusting that a field showing up in an update means
+it changed.
+
 ### Ability Score Improvements
 
 dnd5e grants ASI/feat choices per class, at that class's own levels (e.g. Fighter gets extra ones at 6
