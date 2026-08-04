@@ -108,6 +108,12 @@ already even with each other - e.g. bringing a newly-added second class up to pa
 doesn't trigger a reminder, since there's nothing left to catch up on at that point. These are
 notifications only - nothing is blocked or auto-triggered.
 
+Every gestalt reminder/warning (this one, the base-class-exceeded warning, and the ASI overlap warning
+below) is shown both as the usual toast popup *and* as a whispered chat message to the acting player and
+every GM, so there's a scrollable, permanent record of exactly what fired and why - useful for figuring
+out later whether something was expected behavior or worth reporting, without having to catch and
+remember a toast that's already gone by the time anyone looks.
+
 Detecting a "real" level change is deliberately stricter than just checking whether `system.levels` was
 part of an update: dnd5e's Advancement Manager finalizes a leveling operation by committing a full cloned
 copy of the actor via a bulk `updateEmbeddedDocuments` call, which can include an unrelated sibling
@@ -176,6 +182,23 @@ as "whichever class's grant is better" whenever one grant is a superset of the o
 If a secondary class already leveled past 1 *before* gestalt was turned on, its saves/skills step was
 never shown and won't automatically retroactively appear - open that class item's Advancement tab and
 configure the entry by hand (or remove and re-add the class) to backfill it.
+
+### Safety & reversibility
+
+Every mechanical override above (effective level, proficiency bonus, HP, spell slot doubling) is
+computed fresh from your actual source data on every single data-prep cycle - none of it is cached or
+written anywhere. The module's flags (Enable Gestalt, Double Spell Slots) and dnd5e's own Original Class
+field are the only state it touches directly. That means toggling Enable Gestalt on or off is always
+safe: nothing the module itself does can leave a character's numbers stuck in a broken or inconsistent
+state, because everything just recomputes from scratch the moment you flip the checkbox.
+
+**What toggling gestalt off does *not* undo**, though, is whatever dnd5e's own advancement flow already
+granted while it was on - actual skill proficiencies picked, saves set, feats taken through the unlocked
+prompts. Those are real, persisted choices made through dnd5e's normal UI, not something this module
+tracks or can cleanly revert. Turning gestalt off on a character that already benefited from the
+proficiency unlock will leave it holding proficiencies that don't cleanly match either ruleset anymore
+unless someone manually reviews and trims them. Treat enabling gestalt on a given character as mostly a
+one-way decision, not something to freely experiment with back and forth on a real character.
 
 ## Status
 

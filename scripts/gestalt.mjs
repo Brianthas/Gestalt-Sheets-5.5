@@ -122,6 +122,32 @@ Hooks.once("init", () => {
 Hooks.on("updateItem", onUpdateClassItem);
 
 /* -------------------------------------------- */
+/*  Notifications                                */
+/* -------------------------------------------- */
+
+/**
+ * Show a gestalt reminder/warning both as a UI toast (for the moment) and as a whispered chat message
+ * (as a persistent, scrollable record) - toasts disappear after a few seconds, which made several of
+ * this module's own bugs harder to diagnose than they needed to be, since the exact wording was already
+ * gone by the time anyone went looking for it. Whispered to the acting user and to all GMs, so a GM can
+ * see what happened even on another player's action without needing to be told about it after the fact.
+ * @param {"info"|"warn"} level
+ * @param {string} message
+ */
+function notifyGestalt(level, message) {
+  ui.notifications[level](message);
+
+  const whisper = ChatMessage.getWhisperRecipients("GM").map(u => u.id);
+  if (!whisper.includes(game.user.id)) whisper.push(game.user.id);
+
+  ChatMessage.create({
+    content: message,
+    whisper,
+    flavor: game.i18n.localize("GESTALT.ModuleName")
+  });
+}
+
+/* -------------------------------------------- */
 /*  Level override                              */
 /* -------------------------------------------- */
 
@@ -353,7 +379,7 @@ function onUpdateClassItem(item, changes, options, userId) {
     );
     if (behind.length) {
       const list = behind.map(c => `${c.name} (${c.system.levels})`).join(", ");
-      ui.notifications.info(game.i18n.format("GESTALT.LevelUpReminder", { classes: list }));
+      notifyGestalt("info", game.i18n.format("GESTALT.LevelUpReminder", { classes: list }));
     }
 
     const baseClass = getBaseClass(actor);
@@ -363,7 +389,7 @@ function onUpdateClassItem(item, changes, options, userId) {
       );
       if (overLeveled.length) {
         const list = overLeveled.map(c => `${c.name} (${c.system.levels})`).join(", ");
-        ui.notifications.warn(game.i18n.format("GESTALT.LevelExceedsBase", {
+        notifyGestalt("warn", game.i18n.format("GESTALT.LevelExceedsBase", {
           classes: list,
           base: `${baseClass.name} (${baseClass.system.levels})`
         }));
@@ -420,7 +446,7 @@ function checkSecondaryClassAsiOverlap(actor, item, baseClass) {
   const baseEarned = countAsiEarned(baseClass);
   if (secondaryEarned > baseEarned) return;
 
-  ui.notifications.warn(game.i18n.format("GESTALT.AsiRedundant", {
+  notifyGestalt("warn", game.i18n.format("GESTALT.AsiRedundant", {
     name: actor.name,
     secondary: item.name,
     base: baseClass.name
