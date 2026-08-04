@@ -39,6 +39,14 @@ granting the most HP - not necessarily the base class. A Sorcerer(base)/Fighter(
 uses Fighter's (better) HP total once Fighter has enough levels to grant more than Sorcerer would; it's
 never both added together, and never mixes per-level.
 
+**Level 1 quirk**: dnd5e only grants max hit die at level 1 to whichever class is the actor's single
+"original class" (auto-assigned to whichever class was added first) - a second class's own level 1 only
+gets the average value, same as any later multiclass level. Since gestalt classes are all meant to be
+"starting" classes, not later pickups, this is corrected too: every class's level 1 counts as max hit
+die for gestalt HP purposes, regardless of which one dnd5e considers original. This is computed fresh
+each time rather than depending on what got stored when a level was originally taken, so it self-corrects
+existing characters automatically - no manual backfill needed, unlike the proficiency unlock below.
+
 Not affected: manually-overridden HP max (if you've set a fixed max on the sheet, that's left alone),
 and characters under a "half health" effect (skipped, since that effect scales the summed total in a
 way that can't be cleanly un-summed - a known minor limitation).

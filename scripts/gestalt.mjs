@@ -162,20 +162,47 @@ function applyGestaltHitPoints(characterData) {
   if (actor.hasConditionEffect("halfHealth")) return;
 
   const mod = characterData.abilities?.[CONFIG.DND5E.defaultAbilities?.hitPoints ?? "con"]?.mod ?? 0;
-  const totals = actor.items
+  const hpAdvancements = actor.items
     .filter(i => i.type === "class")
     .map(cls => cls.advancement?.byType?.HitPoints?.[0])
-    .filter(a => a)
-    .map(a => a.getAdjustedTotal(mod));
-  if (totals.length < 2) return;
+    .filter(a => a);
+  if (hpAdvancements.length < 2) return;
+
+  // dnd5e's own totals (used to back out `bonus` below, since that's what it actually used to compute
+  // hp.max) vs the gestalt-corrected totals (used to pick the best class) - see getGestaltAdjustedHpTotal.
+  const originalTotals = hpAdvancements.map(a => a.getAdjustedTotal(mod));
+  const correctedTotals = hpAdvancements.map(a => getGestaltAdjustedHpTotal(a, mod));
 
   const hp = characterData.attributes.hp;
-  const bonus = hp.max - totals.reduce((a, b) => a + b, 0);
-  hp.max = Math.floor(Math.max(...totals) + bonus);
+  const bonus = hp.max - originalTotals.reduce((a, b) => a + b, 0);
+  hp.max = Math.floor(Math.max(...correctedTotals) + bonus);
   hp.effectiveMax = Math.max(hp.max + (hp.tempmax ?? 0), 0);
   hp.value = Math.min(hp.value, hp.effectiveMax);
   hp.damage = hp.effectiveMax - hp.value;
   hp.pct = Math.clamp(hp.effectiveMax ? (hp.value / hp.effectiveMax) * 100 : 0, 0, 100);
+}
+
+/**
+ * dnd5e's HitPointsAdvancement only grants max hit die at level 1 for whichever class is the actor's
+ * single "original class" (`system.details.originalClass`, auto-assigned to whichever class was added
+ * first) - a second class's own level 1, even though it's just as much a starting class in a gestalt
+ * build, only gets the average/rolled value like any other later multiclass level. `getAdjustedTotal()`
+ * just reads whatever was already stored per level, so this recomputes the same total but substitutes
+ * the hit die's max value for level 1 specifically, regardless of what's actually stored there - every
+ * gestalt class is a starting class, so every one of them should get max HP at its own level 1. This
+ * self-corrects characters that already went through the HP flow with "avg" stored at level 1, with no
+ * manual backfill needed, since it's recomputed fresh every time rather than depending on what got
+ * stored when the player originally rolled.
+ * @param {object} hpAdvancement  A HitPointsAdvancement instance.
+ * @param {number} mod            The CON (or configured hit-point ability) modifier to add per level.
+ * @returns {number}
+ */
+function getGestaltAdjustedHpTotal(hpAdvancement, mod) {
+  return Object.keys(hpAdvancement.value).reduce((total, levelKey) => {
+    const level = Number(levelKey);
+    const value = level === 1 ? hpAdvancement.hitDieValue : hpAdvancement.valueForLevel(level);
+    return total + Math.max(value + mod, 1);
+  }, 0);
 }
 
 /* -------------------------------------------- */
