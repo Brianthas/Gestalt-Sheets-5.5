@@ -54,9 +54,12 @@ way that can't be cleanly un-summed - a known minor limitation).
 
 ### Level-up reminders
 
-Whenever a gestalt actor's class levels change, the acting user gets a reminder listing their other
-classes (so features don't get missed), and a warning if a non-base class has leveled past the base
-class. These are notifications only - nothing is blocked or auto-triggered.
+Whenever a gestalt actor's class levels change, the acting user gets a reminder listing any *other*
+classes that are now behind the one that just leveled (so features don't get missed catching them up),
+and a warning if a non-base class has leveled past the base class. Nothing fires if all classes are
+already even with each other - e.g. bringing a newly-added second class up to parity with the first
+doesn't trigger a reminder, since there's nothing left to catch up on at that point. These are
+notifications only - nothing is blocked or auto-triggered.
 
 ### Ability Score Improvements
 

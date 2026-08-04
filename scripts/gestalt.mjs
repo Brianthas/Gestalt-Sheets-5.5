@@ -206,9 +206,14 @@ function onUpdateClassItem(item, changes, options, userId) {
   const advancementChanged = foundry.utils.getProperty(changes, "system.advancement") !== undefined;
 
   if (levelChanged) {
-    const others = actor.items.filter(i => i.type === "class" && i.id !== item.id);
-    if (others.length) {
-      const list = others.map(c => `${c.name} (${c.system.levels})`).join(", ");
+    // Only classes actually behind the one that just leveled - not every other class unconditionally,
+    // which used to fire even when a class had just caught up to parity with the rest (nothing left to
+    // "not forget" at that point).
+    const behind = actor.items.filter(
+      i => i.type === "class" && i.id !== item.id && i.system.levels < item.system.levels
+    );
+    if (behind.length) {
+      const list = behind.map(c => `${c.name} (${c.system.levels})`).join(", ");
       ui.notifications.info(game.i18n.format("GESTALT.LevelUpReminder", { classes: list }));
     }
 
