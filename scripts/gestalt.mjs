@@ -26,15 +26,6 @@ Hooks.once("init", () => {
     default: false
   });
 
-  game.settings.register(MODULE_ID, "limitSkillChoices", {
-    name: "GESTALT.Settings.LimitSkills.Name",
-    hint: "GESTALT.Settings.LimitSkills.Hint",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: false
-  });
-
   const section = game.i18n.localize("GESTALT.ModuleName");
   CONFIG.DND5E.characterFlags[GESTALT_FLAG.ENABLED] = {
     name: game.i18n.localize("GESTALT.EnableGestalt"),
@@ -67,6 +58,10 @@ Hooks.once("init", () => {
   libWrapper.register(MODULE_ID, "dnd5e.documents.advancement.Advancement.prototype.appliesToClass", function(wrapped) {
     if (isProficiencyUnlockAdvancement(this) && isGestaltActor(this.actor)) return true;
     return wrapped();
+  }, "MIXED");
+
+  libWrapper.register(MODULE_ID, "dnd5e.documents.advancement.TraitAdvancement.prototype.maxTraits", function(wrapped) {
+    return capSecondaryClassSkillChoices(this, wrapped());
   }, "MIXED");
 });
 
@@ -114,9 +109,10 @@ function getBaseClass(actor) {
  * entry (weapon/armor), that one keeps applying too, but it's just a subset of the now-also-applying
  * full grant, so the practical result is the full list either way. dnd5e's own advancement-application
  * logic already skips re-granting anything the actor already has, so overlapping proficiencies between
- * classes don't need separate dedup code. For skills specifically, both classes' full choice lists
- * become available side by side, so the separate skill cap check (see below) is what keeps a player
- * from taking skills from both instead of just the more generous one.
+ * classes don't need separate dedup code. For skills specifically, this unlocks both classes' Trait
+ * entries so they *can* apply, but a secondary class's skill *count* is separately capped by
+ * `capSecondaryClassSkillChoices` (see below) so it only ever offers skills beyond what the base class
+ * already provides, not its full list on top.
  * @param {object} advancement
  * @returns {boolean}
  */
@@ -203,7 +199,6 @@ function onUpdateClassItem(item, changes, options, userId) {
   if (!isGestaltActor(actor)) return;
 
   const levelChanged = foundry.utils.getProperty(changes, "system.levels") !== undefined;
-  const advancementChanged = foundry.utils.getProperty(changes, "system.advancement") !== undefined;
 
   if (levelChanged) {
     // Only classes actually behind the one that just leveled - not every other class unconditionally,
@@ -233,8 +228,6 @@ function onUpdateClassItem(item, changes, options, userId) {
 
     checkSecondaryClassAsiOverlap(actor, item, baseClass);
   }
-
-  if (levelChanged || advancementChanged) checkSkillChoiceCap(actor);
 }
 
 /* -------------------------------------------- */
@@ -305,46 +298,28 @@ function getSkillTraitEntries(classItem) {
 }
 
 /**
- * The number of skill proficiencies this character should have from classes, under gestalt rules: the
- * most generous single class's own total (e.g. Rogue's 4 beats Bard's 3), evaluated at that class's own
- * current level - never the sum of every class's grants. Background-granted skills are untouched, since
- * a gestalt character only has one background regardless of how many classes it has.
- * @param {Actor5e} actor
+ * Cap a secondary class's skill-choice count at the source, instead of letting it offer its full list
+ * and warning after the fact. Unlike ASI (where individual advancement entries can't cleanly be
+ * shrunk), a Trait advancement's choice count is just a number (`maxTraits`), so it can be reduced
+ * directly: a secondary class only ever offers skills *beyond* what the base class already provides
+ * (e.g. base Bard's 3 vs secondary Rogue's 4 -> Rogue offers 1, not 4), never a redundant full set on
+ * top. This fully prevents the over-selection rather than detecting it afterward, so there's no warning
+ * to repeatedly nag about and nothing for a player to manually undo.
+ *
+ * Like the ASI overlap check, this only compares a class against the base class specifically, not other
+ * secondary classes in a 3+ class gestalt build - each secondary is evaluated independently.
+ * @param {object} advancement  The TraitAdvancement instance being evaluated.
+ * @param {number} original     The value dnd5e's own `maxTraits` getter would otherwise return.
  * @returns {number}
  */
-function getSkillChoiceCap(actor) {
-  return actor.items.filter(i => i.type === "class").reduce((max, cls) => {
-    const earned = getSkillTraitEntries(cls)
-      .filter(a => a.level <= cls.system.levels)
-      .reduce((sum, a) => sum + a.maxTraits, 0);
-    return Math.max(max, earned);
-  }, 0);
-}
+function capSecondaryClassSkillChoices(advancement, original) {
+  if (!isGestaltActor(advancement.actor)) return original;
+  if (!advancement.representedTraits().has("skills")) return original;
 
-/**
- * The number of class-granted skill proficiencies this character has actually chosen, across every
- * gestalt class.
- * @param {Actor5e} actor
- * @returns {number}
- */
-function countSkillChoicesTaken(actor) {
-  return actor.items.filter(i => i.type === "class").reduce(
-    (sum, cls) => sum + getSkillTraitEntries(cls).reduce((s, a) => s + (a.value.chosen?.size ?? 0), 0), 0
-  );
-}
+  const baseClass = getBaseClass(advancement.actor);
+  if (!baseClass || advancement.item.id === baseClass.id) return original;
 
-/**
- * Warn (never block) if a gestalt actor has chosen more class-granted skill proficiencies than their
- * most generous single class allows.
- * @param {Actor5e} actor
- */
-function checkSkillChoiceCap(actor) {
-  if (!game.settings.get(MODULE_ID, "limitSkillChoices")) return;
-
-  const cap = getSkillChoiceCap(actor);
-  const taken = countSkillChoicesTaken(actor);
-  if (taken > cap) {
-    ui.notifications.warn(game.i18n.format("GESTALT.SkillsOverCap", { taken, cap, name: actor.name }));
-  }
+  const baseTotal = getSkillTraitEntries(baseClass).reduce((sum, a) => sum + a.maxTraits, 0);
+  return Math.max(0, original - baseTotal);
 }
 

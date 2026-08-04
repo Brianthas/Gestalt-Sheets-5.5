@@ -102,17 +102,20 @@ not just the original class's:
   together - e.g. Sorcerer (base, minimal - simple weapons only) + Fighter (secondary) ends up with
   Fighter's full simple/martial weapons and light/medium/heavy armor and shields, not just Fighter's
   reduced secondary-class grant.
-- **Skills**: both classes' full skill choice lists become available side by side (e.g. Rogue's 4 and
-  Bard's 3, not just whichever is "original"), so you can actually pick the more generous one. Enabling
-  **Limit Skill Choices** in the world settings then compares total chosen skills against a cap - the
-  *most generous single class's own total*, not the sum - and warns if you're over.
+- **Skills**: unlike saves/weapons/armor, skill choices are a *count* rather than a fixed set, so "union"
+  doesn't apply the same way - offering both classes' full lists side by side would let you pick from
+  both instead of just the more generous one. Instead, a secondary class's skill count is capped at the
+  source to only the amount *beyond* what the base class already provides: base Bard's 3 vs secondary
+  Rogue's 4 means Rogue only offers 1 additional skill choice, not its full 4. Like the ASI check above,
+  this only compares a class against the base class specifically, not other secondary classes in a 3+
+  class gestalt build.
 
-None of this needs a "which is higher" comparison in code: saves/weapons/armor are just sets of discrete
-proficiencies (light armor, martial weapons, etc.), so granting each class's full list and letting dnd5e's
-own advancement logic skip anything already held naturally produces "the union," which is the same thing
-as "whichever class's grant is better" whenever one grant is a superset of the other (the normal case).
-Skills are the one place an explicit count comparison (the cap check above) is needed, since skill choices
-are a number of picks from a list rather than a fixed set.
+None of this needs a "which is higher" comparison for saves/weapons/armor specifically: they're just sets
+of discrete proficiencies (light armor, martial weapons, etc.), so granting each class's full list and
+letting dnd5e's own advancement logic skip anything already held naturally produces "the union," which is
+the same thing as "whichever class's grant is better" whenever one grant is a superset of the other (the
+normal case). Skills needed the explicit count-capping above instead, since "how many" doesn't have an
+equivalent union.
 
 **Note for existing characters**: this only affects advancement steps as they're offered going forward.
 If a secondary class already leveled past 1 *before* gestalt was turned on, its saves/skills step was
