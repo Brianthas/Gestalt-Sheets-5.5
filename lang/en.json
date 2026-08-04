@@ -1,0 +1,7 @@
+{
+  "GESTALT.ModuleName": "Gestalt Sheets 5.5",
+  "GESTALT.EnableGestalt": "Enable Gestalt",
+  "GESTALT.SelectBaseClass": "Select base class...",
+  "GESTALT.Settings.ModuleEnabled.Name": "Enable Gestalt Sheets",
+  "GESTALT.Settings.ModuleEnabled.Hint": "Master switch for this world. When off, no actor is affected even if gestalt is enabled on their sheet."
+}

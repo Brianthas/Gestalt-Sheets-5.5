@@ -1,0 +1,55 @@
+{
+  "id": "gestalt-sheets-55",
+  "title": "Gestalt Sheets 5.5",
+  "description": "Adds Gestalt character support to the dnd5e system: play two classes at once, gain both classes' features, without your effective level, proficiency bonus, or spell slots scaling as if the levels were added together.",
+  "version": "0.0.1",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
+  "authors": [
+    {
+      "name": "Brianthas"
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "4.0.0",
+          "verified": "5.3.3"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "id": "lib-wrapper",
+        "type": "module",
+        "compatibility": {
+          "minimum": "1.12"
+        }
+      }
+    ]
+  },
+  "esmodules": [
+    "scripts/gestalt.mjs"
+  ],
+  "styles": [
+    "styles/gestalt.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "url": "https://github.com/Brianthas/Gestalt-Sheets-5.5",
+  "manifest": "https://github.com/Brianthas/Gestalt-Sheets-5.5/releases/latest/download/module.json",
+  "download": "https://github.com/Brianthas/Gestalt-Sheets-5.5/releases/latest/download/module.zip",
+  "readme": "https://github.com/Brianthas/Gestalt-Sheets-5.5/blob/main/README.md",
+  "bugs": "https://github.com/Brianthas/Gestalt-Sheets-5.5/issues",
+  "license": "LICENSE"
+}
