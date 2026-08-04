@@ -1,9 +1,15 @@
 const MODULE_ID = "gestalt-sheets-55";
 
-const FLAGS = {
-  ENABLED: "enabled",
-  BASE_CLASS: "baseClass",
-  COMBINED_ASI: "combinedAsi"
+/**
+ * dnd5e's "Special Traits" sheet tab renders one native, guaranteed-interactive form field per entry in
+ * `CONFIG.DND5E.characterFlags`, and its own code hardcodes those fields to save under `flags.dnd5e.<key>`
+ * (see dnd5e's `base-actor-sheet.mjs`: `name: \`flags.dnd5e.${key}\``) - not a module's own flag namespace.
+ * Using this instead of a custom-injected panel means no guessing at render hook names or CSS selectors;
+ * dnd5e's own template and form-submission handling does all of the work.
+ */
+const GESTALT_FLAG = {
+  ENABLED: "gestaltEnabled",
+  COMBINED_ASI: "gestaltCombinedAsi"
 };
 
 /* -------------------------------------------- */
@@ -29,6 +35,20 @@ Hooks.once("init", () => {
     default: false
   });
 
+  const section = game.i18n.localize("GESTALT.ModuleName");
+  CONFIG.DND5E.characterFlags[GESTALT_FLAG.ENABLED] = {
+    name: game.i18n.localize("GESTALT.EnableGestalt"),
+    hint: game.i18n.localize("GESTALT.EnableGestaltHint"),
+    section,
+    type: Boolean
+  };
+  CONFIG.DND5E.characterFlags[GESTALT_FLAG.COMBINED_ASI] = {
+    name: game.i18n.localize("GESTALT.CombinedAsi"),
+    hint: game.i18n.localize("GESTALT.CombinedAsiHint"),
+    section,
+    type: Boolean
+  };
+
   if (!game.modules.get("lib-wrapper")?.active) {
     console.error(`${MODULE_ID} | The "libWrapper" module is required but is not active.`);
     return;
@@ -50,10 +70,6 @@ Hooks.once("init", () => {
   }, "MIXED");
 });
 
-for (const hook of ["renderCharacterActorSheet", "renderActorSheet5eCharacter2", "renderActorSheet5eCharacter"]) {
-  Hooks.on(hook, onRenderCharacterSheet);
-}
-
 Hooks.on("updateItem", onUpdateClassItem);
 
 /* -------------------------------------------- */
@@ -67,18 +83,20 @@ Hooks.on("updateItem", onUpdateClassItem);
  */
 function isGestaltActor(actor) {
   if (!game.settings.get(MODULE_ID, "moduleEnabled")) return false;
-  return actor?.getFlag(MODULE_ID, FLAGS.ENABLED) === true;
+  return actor?.getFlag("dnd5e", GESTALT_FLAG.ENABLED) === true;
 }
 
 /**
- * Get the class item designated as this actor's gestalt base class, if any.
+ * Get the actor's gestalt base class. Reuses dnd5e's own "Original Class" field
+ * (`system.details.originalClass`) rather than a separate module flag, since dnd5e already renders a
+ * native dropdown for it in the same Special Traits tab as the checkboxes above - one less custom
+ * control to build, and it's auto-populated to the first class added, giving new gestalt characters a
+ * sensible default with no setup required.
  * @param {Actor5e} actor
  * @returns {Item5e|null}
  */
 function getBaseClass(actor) {
-  const baseClassId = actor.getFlag(MODULE_ID, FLAGS.BASE_CLASS);
-  if (!baseClassId) return null;
-  const item = actor.items.get(baseClassId);
+  const item = actor.items.get(actor.system.details.originalClass);
   return item?.type === "class" ? item : null;
 }
 
@@ -252,7 +270,7 @@ function countAsiEarned(classItem) {
  * @param {Item5e|null} baseClass
  */
 function checkSecondaryClassAsiOverlap(actor, item, baseClass) {
-  if (actor.getFlag(MODULE_ID, FLAGS.COMBINED_ASI) === true) return;
+  if (actor.getFlag("dnd5e", GESTALT_FLAG.COMBINED_ASI) === true) return;
   if (!baseClass || item.id === baseClass.id) return;
 
   const secondaryEarned = countAsiEarned(item);
@@ -325,76 +343,3 @@ function checkSkillChoiceCap(actor) {
   }
 }
 
-/* -------------------------------------------- */
-/*  Sheet UI                                    */
-/* -------------------------------------------- */
-
-/**
- * Inject the gestalt toggle and base-class picker into the character sheet.
- * @param {ActorSheet} app
- * @param {HTMLElement|JQuery} element
- */
-function onRenderCharacterSheet(app, element) {
-  const actor = app.actor;
-  if (actor?.type !== "character" || !actor.isOwner) return;
-  if (!game.settings.get(MODULE_ID, "moduleEnabled")) return;
-
-  const root = element instanceof HTMLElement ? element : element[0];
-  if (root.querySelector(".gestalt-controls")) return;
-
-  const enabled = actor.getFlag(MODULE_ID, FLAGS.ENABLED) === true;
-  const baseClassId = actor.getFlag(MODULE_ID, FLAGS.BASE_CLASS) ?? "";
-  const combinedAsi = actor.getFlag(MODULE_ID, FLAGS.COMBINED_ASI) === true;
-  const classItems = actor.items.filter(i => i.type === "class");
-
-  const panel = document.createElement("fieldset");
-  panel.classList.add("gestalt-controls");
-
-  const legend = document.createElement("legend");
-  legend.textContent = game.i18n.localize("GESTALT.ModuleName");
-  panel.appendChild(legend);
-
-  const toggleLabel = document.createElement("label");
-  const toggle = document.createElement("input");
-  toggle.type = "checkbox";
-  toggle.checked = enabled;
-  toggle.addEventListener("change", () => actor.setFlag(MODULE_ID, FLAGS.ENABLED, toggle.checked));
-  toggleLabel.appendChild(toggle);
-  toggleLabel.append(` ${game.i18n.localize("GESTALT.EnableGestalt")}`);
-  panel.appendChild(toggleLabel);
-
-  const select = document.createElement("select");
-  select.disabled = !enabled;
-  const blankOption = document.createElement("option");
-  blankOption.value = "";
-  blankOption.textContent = game.i18n.localize("GESTALT.SelectBaseClass");
-  select.appendChild(blankOption);
-  for (const cls of classItems) {
-    const option = document.createElement("option");
-    option.value = cls.id;
-    option.textContent = `${cls.name} (${cls.system.levels})`;
-    if (cls.id === baseClassId) option.selected = true;
-    select.appendChild(option);
-  }
-  select.addEventListener("change", () => actor.setFlag(MODULE_ID, FLAGS.BASE_CLASS, select.value || null));
-  panel.appendChild(select);
-
-  const combinedAsiLabel = document.createElement("label");
-  const combinedAsiToggle = document.createElement("input");
-  combinedAsiToggle.type = "checkbox";
-  combinedAsiToggle.checked = combinedAsi;
-  combinedAsiToggle.disabled = !enabled;
-  combinedAsiToggle.addEventListener(
-    "change", () => actor.setFlag(MODULE_ID, FLAGS.COMBINED_ASI, combinedAsiToggle.checked)
-  );
-  combinedAsiLabel.appendChild(combinedAsiToggle);
-  combinedAsiLabel.append(` ${game.i18n.localize("GESTALT.CombinedAsi")}`);
-  panel.appendChild(combinedAsiLabel);
-
-  toggle.addEventListener("change", () => {
-    select.disabled = !toggle.checked;
-    combinedAsiToggle.disabled = !toggle.checked;
-  });
-
-  root.querySelector(".window-content")?.prepend(panel);
-}

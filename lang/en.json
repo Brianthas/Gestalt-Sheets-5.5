@@ -1,8 +1,9 @@
 {
   "GESTALT.ModuleName": "Gestalt Sheets 5.5",
   "GESTALT.EnableGestalt": "Enable Gestalt",
-  "GESTALT.SelectBaseClass": "Select base class...",
+  "GESTALT.EnableGestaltHint": "Treat this character as a gestalt: effective level, proficiency bonus, and hit points follow the \"Original Class\" above instead of the sum of all classes.",
   "GESTALT.CombinedAsi": "Use Combined Class ASIs",
+  "GESTALT.CombinedAsiHint": "Only relevant if Enable Gestalt is checked. Allows this character to take Ability Score Improvements from every class independently (normal multiclassing) without a redundancy warning.",
   "GESTALT.Settings.ModuleEnabled.Name": "Enable Gestalt Sheets",
   "GESTALT.Settings.ModuleEnabled.Hint": "Master switch for this world. When off, no actor is affected even if gestalt is enabled on their sheet.",
   "GESTALT.Settings.LimitSkills.Name": "Limit Skill Choices",

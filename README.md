@@ -18,11 +18,18 @@ https://github.com/Brianthas/Gestalt-Sheets-5.5/releases/latest/download/module.
 
 1. As GM, enable **Enable Gestalt Sheets** in the module's world settings (off by default).
 2. Add each of your classes to the character as normal (dnd5e multiclassing).
-3. On the character sheet, check **Enable Gestalt** and pick one class as the **base class**.
+3. Open the character sheet's **Special Traits** tab (the star icon in the sidebar). Check **Enable
+   Gestalt**, and set **Original Class** (dnd5e's own field, at the top of that same tab) to whichever
+   class should be the gestalt base class.
 
-The base class's own level becomes the character's effective level for proficiency bonus, tier, and
-anything else that normally scales off total character level. Every other class still grants its own
-features at its own level as usual, uncapped by the base class.
+Everything the module adds lives in that Special Traits tab, as native dnd5e form fields - not a custom
+panel - so it behaves and looks exactly like every other checkbox/dropdown on the sheet.
+
+The base class ("Original Class")'s own level becomes the character's effective level for proficiency
+bonus, tier, and anything else that normally scales off total character level. Every other class still
+grants its own features at its own level as usual, uncapped by the base class. dnd5e auto-sets Original
+Class to whichever class you add first, so a new gestalt character has a sensible default with no setup
+needed - change it any time from that same dropdown.
 
 ### Hit Points
 
@@ -68,20 +75,19 @@ class's count, it's a genuine bonus slot most classes don't get, and nothing fir
 continuing on to its level-6 ASI (2, beating Sorcerer's 1) is silent. This is a heads-up only, shown
 before you even open the ASI/feat picker for it - nothing is blocked, and nothing is auto-deleted.
 
-Checking **Use Combined Class ASIs** on the character sheet turns this off entirely for that actor -
-every class's ASIs apply normally, doubled up, with no warnings. This is a per-actor sheet setting (next
-to the base class picker), not a world setting, since it's about what a specific table wants for a
-specific character.
+Checking **Use Combined Class ASIs** (Special Traits tab, next to Enable Gestalt) turns this off entirely
+for that actor - every class's ASIs apply normally, doubled up, with no warnings. This is a per-actor
+setting, not a world setting, since it's about what a specific table wants for a specific character, and
+it only has any effect when Enable Gestalt is also checked.
 
 ### Saving Throws, Skill, Weapon & Armor Proficiencies
 
 Unlike ASIs, dnd5e normally *restricts* these rather than doubling them up: saving throw proficiencies,
 most classes' skill choices, and the *full* weapon/armor proficiency list only come from the actor's
-"original class" - whichever class happened to be added to the sheet first (`system.details.originalClass`,
-auto-assigned, with no in-sheet way to change it). A second class contributes nothing to saves, usually
-nothing to skills, and only a reduced weapon/armor list. That's correct for normal 5e multiclassing, but
-wrong for gestalt, where the intent is: compare what each class would grant, and end up with the better
-one whenever they overlap.
+"original class" (`system.details.originalClass` - the same **Original Class** field used above as the
+gestalt base class). A second class contributes nothing to saves, usually nothing to skills, and only a
+reduced weapon/armor list. That's correct for normal 5e multiclassing, but wrong for gestalt, where the
+intent is: compare what each class would grant, and end up with the better one whenever they overlap.
 
 For gestalt actors, all of these are unlocked so every class's proficiency-granting advancement applies,
 not just the original class's:
