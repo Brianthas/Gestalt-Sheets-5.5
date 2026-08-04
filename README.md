@@ -1,4 +1,4 @@
-# Gestalt-Sheets-5.5
+# Gestalt D&D 5.5e
 
 A [Foundry VTT](https://foundryvtt.com/) module for the [dnd5e](https://github.com/foundryvtt/dnd5e) system that adds support for **Gestalt** characters: play two classes at once and gain the features of both, without your effective level, proficiency bonus, or spell slots scaling as if the two classes' levels were added together.
 

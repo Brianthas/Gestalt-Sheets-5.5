@@ -1,5 +1,5 @@
 {
-  "GESTALT.ModuleName": "Gestalt Sheets 5.5",
+  "GESTALT.ModuleName": "Gestalt D&D 5.5e",
   "GESTALT.EnableGestalt": "Enable Gestalt",
   "GESTALT.EnableGestaltHint": "Replaces standard multiclassing for this character - not layered on top of it. Effective level, proficiency bonus, and hit points follow the \"Original Class\" above instead of the sum of all classes, and every class gets full saves/weapon/armor proficiencies instead of diluted multiclass ones. Skill choices are NOT capped: you get the full skill list from every class, not just the more generous one.",
   "GESTALT.DoubleSpellSlots": "Double Spell Slots",
