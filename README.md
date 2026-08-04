@@ -12,6 +12,14 @@ saves, diluted proficiencies). Don't expect a character to be "gestalt for two o
 multiclass for a third" - if Enable Gestalt is on, none of that character's classes use standard
 multiclassing math anymore.
 
+**Built and tested around exactly two classes.** Everything here assumes a base class plus one secondary
+class. Adding a third (or more) is likely to get buggy - the ASI overlap check and the saves/skills/
+weapon/armor unlock only ever compare a class against the *base* class specifically, not against other
+secondary classes, so with three or more classes the module has no way to notice that two secondaries
+are stepping on each other (e.g. two secondary classes both granting overlapping "bonus" ASIs, or saving
+throw proficiencies unioning across three classes' worth of grants instead of two). Two classes is the
+supported shape; more than that isn't something to rely on.
+
 ## Installation
 
 Requires the [libWrapper](https://foundryvtt.com/packages/lib-wrapper) module.
@@ -38,6 +46,20 @@ bonus, tier, and anything else that normally scales off total character level. E
 grants its own features at its own level as usual, uncapped by the base class. dnd5e auto-sets Original
 Class to whichever class you add first, so a new gestalt character has a sensible default with no setup
 needed - change it any time from that same dropdown.
+
+**Always level the base class when you want the character's effective level to advance.** Proficiency
+bonus, tier, HP-per-level bonus, cantrip scaling, and XP-to-next-level are all pinned to the base class's
+own level specifically - leveling only the secondary class does nothing for any of those, even though it
+still grants that class's own features normally. The secondary class can lag behind or catch up at
+whatever pace the table wants; the module reminds you (see Level-up reminders below) when it falls
+behind, and warns if it gets ahead of the base class.
+
+One gap worth knowing about: that reminder only fires when a class **levels up**, and only lists *other*
+classes that are behind the one that just changed - it doesn't check whether the class that just changed
+is itself behind. So if you level the base class to 3 first and *then* add the secondary class at level
+1, no reminder fires at that point telling you the new class is now 2 levels behind - it'll stay quiet
+until the base class levels again. Worth manually leveling a late-added secondary class up to match if
+you want it caught up right away, rather than waiting on a reminder that won't come until later.
 
 ### Hit Points
 
