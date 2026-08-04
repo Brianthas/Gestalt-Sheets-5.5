@@ -2,11 +2,13 @@
   "GESTALT.ModuleName": "Gestalt Sheets 5.5",
   "GESTALT.EnableGestalt": "Enable Gestalt",
   "GESTALT.EnableGestaltHint": "Replaces standard multiclassing for this character - not layered on top of it. Effective level, proficiency bonus, and hit points follow the \"Original Class\" above instead of the sum of all classes, and every class gets full saves/weapon/armor proficiencies instead of diluted multiclass ones. Skill choices are NOT capped: you get the full skill list from every class, not just the more generous one.",
-  "GESTALT.CombinedAsi": "Use Combined Class ASIs",
-  "GESTALT.CombinedAsiHint": "Only relevant if Enable Gestalt is checked. Allows this character to take Ability Score Improvements from every class independently (normal multiclassing) without a redundancy warning.",
+  "GESTALT.DoubleSpellSlots": "Double Spell Slots",
+  "GESTALT.DoubleSpellSlotsHint": "Only relevant if Enable Gestalt is checked. Doubles this character's leveled (non-Pact) spell slot totals, on top of whatever dnd5e's normal multiclass math already computes - a rough stand-in for casting as two characters, not a true separate pool per class. Does not affect Pact Magic, which is already correct.",
   "GESTALT.Settings.ModuleEnabled.Name": "Enable Gestalt Sheets",
   "GESTALT.Settings.ModuleEnabled.Hint": "Master switch for this world. When off, no actor is affected even if gestalt is enabled on their sheet.",
+  "GESTALT.Settings.CombinedAsi.Name": "Use Combined Class ASIs",
+  "GESTALT.Settings.CombinedAsi.Hint": "World-wide house rule choice. When on, every gestalt actor can take Ability Score Improvements from every class independently (normal multiclassing) with no redundancy warning. When off (default), a secondary class's ASI is flagged if it doesn't exceed what the base class already provides.",
   "GESTALT.LevelUpReminder": "Gestalt: don't forget your other classes - {classes}",
   "GESTALT.LevelExceedsBase": "Gestalt: {classes} is now higher level than your base class, {base}",
-  "GESTALT.AsiRedundant": "Gestalt: {name}'s {secondary} just reached an Ability Score Improvement, but base class {base} already has one at this point. Check \"Use Combined Class ASIs\" if you want to allow it."
+  "GESTALT.AsiRedundant": "Gestalt: {name}'s {secondary} just reached an Ability Score Improvement, but base class {base} already has one at this point. Ask your GM to enable \"Use Combined Class ASIs\" in the world settings if you want to allow it."
 }

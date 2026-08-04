@@ -32,7 +32,9 @@ https://github.com/Brianthas/Gestalt-Sheets-5.5/releases/latest/download/module.
 
 ## Usage
 
-1. As GM, enable **Enable Gestalt Sheets** in the module's world settings (off by default).
+1. As GM, enable **Enable Gestalt Sheets** in the module's world settings (off by default). **Use Combined
+   Class ASIs** lives in the same world settings if you want to turn off ASI overlap checking table-wide
+   (see Ability Score Improvements below).
 2. Add each of your classes to the character as normal (dnd5e multiclassing).
 3. Open the character sheet's **Special Traits** tab (the star icon in the sidebar). Check **Enable
    Gestalt**, and set **Original Class** (dnd5e's own field, at the top of that same tab) to whichever
@@ -84,11 +86,18 @@ way that can't be cleanly un-summed - a known minor limitation).
 ### Spellcasting
 
 - **Pact Magic** (Warlock) is already tracked as a separate pool by the base system, so it's unaffected.
-- Non-pact spell slots (leveled slots from full/half/third casters) currently still use dnd5e's normal
-  multiclass rule of one shared pool sized off the *summed* caster levels. If you're running two
-  non-pact spellcasting classes in the same gestalt build, use dnd5e's built-in **Configure Spell Slots**
-  override (actor sheet → spellcasting config) to hand-set the pool to whatever your table intends.
-  Automatic separate pools per class may come later.
+- Non-pact spell slots (leveled slots from full/half/third casters) still use dnd5e's normal multiclass
+  rule of one shared pool sized off the *summed* caster levels - true separate pools per class would need
+  registering whole new spellcasting types with dnd5e, not a small patch, so that hasn't been built.
+- As a much simpler stand-in, checking **Double Spell Slots** (Special Traits tab, next to Enable Gestalt)
+  doubles the final leveled slot count at every spell level, on top of whatever dnd5e's normal multiclass
+  math already computed. It's a rough approximation of "casting as two characters," not a mechanically
+  precise per-class pool - if you're running two non-pact spellcasting classes and want more exact
+  control, dnd5e's built-in **Configure Spell Slots** override (actor sheet → spellcasting config) can
+  hand-set any level's pool to whatever your table intends instead. Doubling respects any level you've
+  manually overridden that way (an overridden level is left exactly as set, not doubled), and preserves
+  already-spent slots rather than topping them back up (it adds the pre-doubling max to the remaining
+  value, not to the max alone).
 
 ### Level-up reminders
 
@@ -126,10 +135,10 @@ class's count, it's a genuine bonus slot most classes don't get, and nothing fir
 continuing on to its level-6 ASI (2, beating Sorcerer's 1) is silent. This is a heads-up only, shown
 before you even open the ASI/feat picker for it - nothing is blocked, and nothing is auto-deleted.
 
-Checking **Use Combined Class ASIs** (Special Traits tab, next to Enable Gestalt) turns this off entirely
-for that actor - every class's ASIs apply normally, doubled up, with no warnings. This is a per-actor
-setting, not a world setting, since it's about what a specific table wants for a specific character, and
-it only has any effect when Enable Gestalt is also checked.
+Enabling **Use Combined Class ASIs** in the world settings turns this off entirely, for every gestalt
+actor - every class's ASIs apply normally, doubled up, with no warnings. This is a world setting rather
+than a per-actor one: whether ASI overlap gets checked at all is a table-wide house rule call for the GM
+to make, not something that should vary character to character within the same game.
 
 ### Saving Throws, Skill, Weapon & Armor Proficiencies
 
@@ -170,4 +179,4 @@ configure the entry by hand (or remove and re-add the class) to backfill it.
 
 ## Status
 
-Early development.
+Early development. See [CHANGELOG.md](CHANGELOG.md) for a version-by-version history of what changed.

@@ -9,7 +9,7 @@ const MODULE_ID = "gestalt-sheets-55";
  */
 const GESTALT_FLAG = {
   ENABLED: "gestaltEnabled",
-  COMBINED_ASI: "gestaltCombinedAsi"
+  DOUBLE_SPELL_SLOTS: "gestaltDoubleSpellSlots"
 };
 
 /* -------------------------------------------- */
@@ -59,6 +59,17 @@ Hooks.once("init", () => {
     default: false
   });
 
+  // World setting, not a per-actor flag: whether ASI overlap is checked at all is a table-wide house
+  // rule call, not something that should vary character to character within the same game.
+  game.settings.register(MODULE_ID, "combinedAsi", {
+    name: "GESTALT.Settings.CombinedAsi.Name",
+    hint: "GESTALT.Settings.CombinedAsi.Hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
+  });
+
   const section = game.i18n.localize("GESTALT.ModuleName");
   CONFIG.DND5E.characterFlags[GESTALT_FLAG.ENABLED] = {
     name: game.i18n.localize("GESTALT.EnableGestalt"),
@@ -66,9 +77,9 @@ Hooks.once("init", () => {
     section,
     type: Boolean
   };
-  CONFIG.DND5E.characterFlags[GESTALT_FLAG.COMBINED_ASI] = {
-    name: game.i18n.localize("GESTALT.CombinedAsi"),
-    hint: game.i18n.localize("GESTALT.CombinedAsiHint"),
+  CONFIG.DND5E.characterFlags[GESTALT_FLAG.DOUBLE_SPELL_SLOTS] = {
+    name: game.i18n.localize("GESTALT.DoubleSpellSlots"),
+    hint: game.i18n.localize("GESTALT.DoubleSpellSlotsHint"),
     section,
     type: Boolean
   };
@@ -97,6 +108,15 @@ Hooks.once("init", () => {
     if (isProficiencyUnlockAdvancement(this) && isGestaltActor(this.actor)) return true;
     return wrapped();
   }, "MIXED");
+
+  // Leveled spell slots (system.spells.spell1-9) are computed inside Actor5e#prepareData, *after* the
+  // character data model's own prepareDerivedData already ran - a different, later point in the prepare
+  // cycle than the wraps above, so it needs its own wrap on the actor document class rather than the
+  // data model.
+  registerLibWrapper("CONFIG.Actor.documentClass.prototype.prepareData", function(wrapped, ...args) {
+    wrapped(...args);
+    applyGestaltSpellSlotDoubling(this);
+  }, "WRAPPER");
 });
 
 Hooks.on("updateItem", onUpdateClassItem);
@@ -240,6 +260,44 @@ function getGestaltAdjustedHpTotal(hpAdvancement, mod) {
 }
 
 /* -------------------------------------------- */
+/*  Spell slots                                 */
+/* -------------------------------------------- */
+
+/**
+ * Non-pact spell slots aren't split into separate per-class pools (see the README's Spellcasting
+ * section for why - it would need registering whole new spellcasting types, not a small patch). As a
+ * much simpler stand-in, this per-actor opt-in just doubles the final leveled slot count (`system.spells.
+ * spell1` through `spell9`) at each level, on top of whatever dnd5e's normal multiclass math already
+ * computed - a rough approximation of "casting as two characters" rather than a mechanically precise
+ * per-class pool.
+ *
+ * Only touches leveled slots, not Pact Magic (`system.spells.pact`), which is already isolated to its
+ * own casting class's level and doesn't need correction. Skips any spell level the GM has manually
+ * overridden (dnd5e's own "Configure Spell Slots" dialog), respecting that as an intentional exact value
+ * the same way the HP override respects a manually-set HP max. Adds the pre-doubling max to `value` too
+ * (not just doubling max), so already-spent slots stay spent rather than being topped back up - this is
+ * always safe since value can never exceed the original max, so value + originalMax can never exceed the
+ * new doubled max either.
+ * @param {Actor5e} actor
+ */
+function applyGestaltSpellSlotDoubling(actor) {
+  if (!isGestaltActor(actor)) return;
+  if (actor.getFlag("dnd5e", GESTALT_FLAG.DOUBLE_SPELL_SLOTS) !== true) return;
+
+  const spells = actor.system.spells;
+  if (!spells) return;
+
+  for (let level = 1; level <= 9; level++) {
+    const slot = spells[`spell${level}`];
+    if (!slot?.max) continue;
+    if (Number.isNumeric(slot.override)) continue;
+
+    slot.value += slot.max;
+    slot.max *= 2;
+  }
+}
+
+/* -------------------------------------------- */
 /*  Level-up reminders                          */
 /* -------------------------------------------- */
 
@@ -347,14 +405,15 @@ function countAsiEarned(classItem) {
  * against the base class specifically, not other secondary classes in a 3+ class gestalt build.
  *
  * This is a heads-up only, fired at the moment the level crosses a threshold, before the player even
- * opens the ASI/feat picker for it - not a block. A GM/player who wants full combined ASIs for a
- * character can check "Use Combined Class ASIs" on the sheet to skip this warning entirely.
+ * opens the ASI/feat picker for it - not a block. Enabling "Use Combined Class ASIs" in the world
+ * settings turns this off entirely, for every gestalt actor - a table-wide house rule choice for the GM
+ * to make, not something that should vary character to character within the same game.
  * @param {Actor5e} actor
  * @param {Item5e} item        The class item that just changed level.
  * @param {Item5e|null} baseClass
  */
 function checkSecondaryClassAsiOverlap(actor, item, baseClass) {
-  if (actor.getFlag("dnd5e", GESTALT_FLAG.COMBINED_ASI) === true) return;
+  if (game.settings.get(MODULE_ID, "combinedAsi") === true) return;
   if (!baseClass || item.id === baseClass.id) return;
 
   const secondaryEarned = countAsiEarned(item);
