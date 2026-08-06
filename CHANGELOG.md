@@ -3,6 +3,39 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [1.0.0] - 2026-08-06
+
+First full release. Verified working on both Foundry core v13 and v14, and on dnd5e 5.2.5 through
+5.3.3 - a reported "doesn't work on 5.2.5" issue turned out to be the world's "Enable Gestalt Sheets"
+setting simply not being checked, not an actual compatibility problem; the module's code needed no
+changes at all to work correctly on the older dnd5e/core combination.
+
+### Changed
+- Compatibility declaration bumped: Foundry core `verified` raised from 13 to 14, reflecting direct
+  testing on both.
+
+## [0.4.2] - 2026-08-06
+
+### Changed
+- Display title renamed to "Gestalt D&D 5.5e" (module.json, the in-sheet Special Traits section header,
+  and the README heading), to match the Foundry package listing submission.
+
+## [0.4.1] - 2026-08-06
+
+### Added
+- `tools/release.mjs`: a small script that bumps `module.json`'s version, commits that alone, tags, and
+  pushes - the four-step release dance this project had been doing by hand.
+
+### Changed
+- Every gestalt reminder/warning now also posts as a whispered chat message (to the acting player and
+  all GMs), in addition to the usual toast, so there's a persistent record of what fired and why.
+
+### Documentation
+- Added a "Safety & reversibility" section to the README: every mechanical override is derived fresh
+  each cycle (nothing cached or written, so toggling gestalt is always safe), but dnd5e's own
+  advancement choices already granted through the unlocked prompts (skills, saves, feats) do not get
+  undone just by disabling gestalt afterward.
+
 ## [0.4.0] - 2026-08-04
 
 ### Added

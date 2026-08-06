@@ -202,4 +202,5 @@ one-way decision, not something to freely experiment with back and forth on a re
 
 ## Status
 
-Early development. See [CHANGELOG.md](CHANGELOG.md) for a version-by-version history of what changed.
+1.0 release. Actively tested in a live game. Verified working on Foundry core v13 and v14, and on dnd5e
+5.2.5 through 5.3.3. See [CHANGELOG.md](CHANGELOG.md) for a version-by-version history of what changed.
