@@ -83,6 +83,14 @@ Not affected: manually-overridden HP max (if you've set a fixed max on the sheet
 and characters under a "half health" effect (skipped, since that effect scales the summed total in a
 way that can't be cleanly un-summed - a known minor limitation).
 
+### Hit Dice
+
+Same doubling problem as HP: dnd5e sums every class's own hit dice (each class's own level's worth), so
+a two-class gestalt build shows twice its character level in hit dice. Gestalt hit dice instead equal
+your character level, using the larger of your two classes' hit die - the classic gestalt house rule.
+Spending or recovering hit dice (short/long rest) draws from that larger-die class only; the other
+class's hit dice sit unused, same as the tabletop rule intends.
+
 ### Spellcasting
 
 - **Pact Magic** (Warlock) is already tracked as a separate pool by the base system, so it's unaffected.
