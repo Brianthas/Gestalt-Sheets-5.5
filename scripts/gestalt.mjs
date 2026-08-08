@@ -97,6 +97,7 @@ Hooks.once("init", () => {
   registerLibWrapper("CONFIG.Actor.dataModels.character.prototype.prepareBaseData", function(wrapped, ...args) {
     wrapped(...args);
     applyGestaltLevel(this);
+    applyGestaltHitDice(this);
   }, "WRAPPER");
 
   registerLibWrapper("CONFIG.Actor.dataModels.character.prototype.prepareDerivedData", function(wrapped, ...args) {
@@ -219,6 +220,42 @@ function applyGestaltLevel(characterData) {
 
   characterData.details.level = baseClass.system.levels;
   characterData.attributes.prof = dnd5e.documents.Proficiency.calculateMod(characterData.details.level);
+}
+
+/**
+ * dnd5e's `HitDice.max`/`.value` sum every class's own hit-die total (each class's own level, since a
+ * class's `hd.max` is just its `levels`) - correct for real multiclassing, but for gestalt that's every
+ * class's level added together even though every class levels in lockstep, so a two-class gestalt build
+ * shows double its character level (e.g. two level-5 classes reporting 10 hit dice instead of 5). The
+ * classic gestalt house rule this module follows: hit dice equal to character level, rolled using the
+ * larger of the two classes' hit die - not a per-level mix, matching the same "pick one class" approach
+ * already used for HP.
+ *
+ * Rather than reimplementing `HitDice`, this shrinks its `classes`/`sizes` sets down to just the
+ * larger-die class and overrides `max`/`value` to match - `bySize`, `pct`, and every other `HitDice`
+ * getter derive from those same fields, so they and dnd5e's own rest/roll code (which reads
+ * `attributes.hd.classes` to decide which class item's `system.hd.spent` to increment) stay correct
+ * without any further patching. Spent hit dice keep living on the larger-die class item itself - no new
+ * storage needed, and it self-corrects every prepare cycle the same way the HP override does.
+ * @param {CharacterData} characterData
+ */
+function applyGestaltHitDice(characterData) {
+  const actor = characterData.parent;
+  if (!isGestaltActor(actor)) return;
+
+  const classes = actor.items.filter(i => i.type === "class");
+  if (classes.length < 2) return;
+
+  const denomination = cls => Number(cls.system.hd.denomination.slice(1));
+  const largest = classes.reduce((best, cls) => denomination(cls) > denomination(best) ? cls : best);
+
+  const hd = characterData.attributes.hd;
+  hd.classes = new Set([largest]);
+  hd.sizes = new Set([denomination(largest)]);
+
+  const max = characterData.details.level;
+  Object.defineProperty(hd, "max", { value: max, configurable: true });
+  Object.defineProperty(hd, "value", { value: Math.max(max - largest.system.hd.spent, 0), configurable: true });
 }
 
 /**

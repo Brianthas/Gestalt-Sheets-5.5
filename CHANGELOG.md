@@ -3,6 +3,14 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [1.0.1] - 2026-08-08
+
+### Fixed
+- Hit dice on the character sheet summary showed the sum of every gestalt class's own hit dice (e.g. two
+  level-5 classes reporting 10), instead of one hit die per character level. Hit dice now equal character
+  level, using the larger of the two classes' hit die - the same "pick one class" approach already used
+  for HP - and short/long rest spending/recovery draws from that class only.
+
 ## [1.0.0] - 2026-08-06
 
 First full release. Verified working on both Foundry core v13 and v14, and on dnd5e 5.2.5 through
