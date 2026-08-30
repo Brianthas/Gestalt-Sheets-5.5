@@ -3,6 +3,35 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [1.0.2] - 2026-08-29
+
+Both issues in this release came from one bug report about a level 1 Wizard/Druid with **Double Spell
+Slots** enabled: six 1st-level slots instead of four, and casting a spell *adding* slots rather than
+spending them.
+
+### Fixed
+- **Spell slots were sized off the summed caster levels of both classes.** dnd5e's multiclass rule adds
+  every spellcasting class's caster level together, so a gestalt Wizard 1 / Druid 1 was treated as a level
+  2 caster (3 first-level slots, doubling to 6) and a Wizard 5 / Druid 5 as a level 10 caster, complete
+  with 5th-level slots on a level 5 character. Caster level now uses the largest single class's
+  contribution instead, matching how the module already handles character level and hit dice. The
+  reported Wizard 1 / Druid 1 now gets 2 slots, or 4 with Double Spell Slots on.
+- **Casting a spell added slots instead of spending them.** Doubling used to add the pre-doubling maximum
+  to the *current* value as well as to the maximum, to preserve already-spent slots. But dnd5e writes
+  spent slots back as an absolute number read off the derived data (casting stores `value - 1`; a long
+  rest stores `max`), so that added amount was banked into the stored value and then added again on the
+  next prepare, growing every time the character cast or rested - the extra purple pips on the sheet.
+  Doubling now raises the maximum only.
+- Slot values are clamped to the maximum for gestalt characters, which repairs any character already
+  carrying an inflated stored value from the bug above. The sheet shows the correct number immediately;
+  the corrected value is written back on the next cast or long rest. dnd5e clamps Pact Magic this way
+  itself, but not leveled slots.
+
+### Changed
+- The caster level correction applies to any gestalt character, whether or not Double Spell Slots is
+  ticked. If you have a gestalt caster who was getting the summed-level slot table, their slots will drop
+  to the correct single-class-level table on update.
+
 ## [1.0.1] - 2026-08-08
 
 ### Fixed

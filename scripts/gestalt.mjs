@@ -116,8 +116,32 @@ Hooks.once("init", () => {
   // data model.
   registerLibWrapper("CONFIG.Actor.documentClass.prototype.prepareData", function(wrapped, ...args) {
     wrapped(...args);
-    applyGestaltSpellSlotDoubling(this);
+    applyGestaltSpellSlots(this);
   }, "WRAPPER");
+
+  // Caster level. dnd5e fires one `dnd5e.prepare<Type>Slots` hook per slot-providing spellcasting
+  // method, with the accumulated progression object, immediately before it turns that progression into
+  // slots - the documented seam for changing how many slots a character gets, and the last point at
+  // which the caster level can still be corrected. Registered per method (`spell`, `pact`, plus any a
+  // module adds) rather than hardcoding "spell", since the same summing bug applies to every one of
+  // them.
+  //
+  // Only the method *keys* are read here: at `init` the `CONFIG.DND5E.spellcasting` entries are still
+  // the plain config objects, and dnd5e swaps in the SpellcastingModel instances that carry `slots` and
+  // `computeProgression` later in its own startup. Checked live: at init `spellcasting.spell.slots` is
+  // undefined, by the time the hook fires it is a MultiLevelSpellcasting. So the model is looked up
+  // inside the handler, not captured here.
+  //
+  // dnd5e 4.x called this config `spellcastingTypes` and keyed leveled casting as "leveled" rather than
+  // "spell"; reading the keys off whichever exists produces the right hook name on either. The handler
+  // itself needs a SpellcastingModel to reuse dnd5e's own progression maths, which only 5.x has, so on
+  // 4.x it finds none and leaves the caster level alone rather than throwing.
+  const spellcastingConfig = CONFIG.DND5E.spellcasting ?? CONFIG.DND5E.spellcastingTypes ?? {};
+  for (const type of Object.keys(spellcastingConfig)) {
+    Hooks.on(`dnd5e.prepare${type.capitalize()}Slots`, (spells, actor, progression) => {
+      applyGestaltCasterLevel(actor, type, progression);
+    });
+  }
 });
 
 Hooks.on("updateItem", onUpdateClassItem);
@@ -327,36 +351,86 @@ function getGestaltAdjustedHpTotal(hpAdvancement, mod) {
 /* -------------------------------------------- */
 
 /**
+ * Correct the caster level a spellcasting method's slots are sized off. dnd5e builds its progression by
+ * *adding* every spellcasting class's contribution together (`SlotSpellcasting#computeProgression` does
+ * `progression[key] += levels / divisor`), which is right for real multiclassing and wrong for gestalt
+ * for exactly the reason character level is: the classes level in lockstep, so a Wizard 5 / Druid 5
+ * gestalt is a level 5 caster, not a level 10 one. Left alone it hands a level 5 character 5th-level
+ * spell slots.
+ *
+ * The replacement is the largest single class's contribution, computed with dnd5e's own
+ * `computeProgression` so half- and third-caster divisors, `roundUp`, and any progression a module has
+ * registered all stay the system's business rather than being reimplemented here. Each class is costed
+ * as `count: 1` (single-classed), which is what makes a half caster round *up* - correct for gestalt,
+ * where each side of the build is effectively its own single-classed character.
+ *
+ * Runs before dnd5e turns the progression into slots, so every later consumer (the slot maxima, the
+ * spellcasting tab's "spellcaster level", scaling cantrips that read it) sees the corrected number.
+ * @param {Actor5e} actor       Actor the slots are being prepared for.
+ * @param {string} type         Spellcasting method key, e.g. "spell" or "pact".
+ * @param {object} progression  Spellcasting progression data. *Will be mutated.*
+ */
+function applyGestaltCasterLevel(actor, type, progression) {
+  if (!isGestaltActor(actor)) return;
+  if (!progression?.[type]) return;
+
+  const model = CONFIG.DND5E.spellcasting?.[type];
+  if (!model?.slots || (typeof model.computeProgression !== "function")) return;
+
+  const classes = actor.itemTypes.class.filter(cls => cls.spellcasting?.type === type);
+  if (classes.length < 2) return;
+
+  let best = 0;
+  for (const cls of classes) {
+    const single = { [type]: 0 };
+    model.computeProgression(single, actor, cls, cls.spellcasting, 1);
+    best = Math.max(best, single[type] ?? 0);
+  }
+
+  progression[type] = best;
+}
+
+/**
  * Non-pact spell slots aren't split into separate per-class pools (see the README's Spellcasting
  * section for why - it would need registering whole new spellcasting types, not a small patch). As a
- * much simpler stand-in, this per-actor opt-in just doubles the final leveled slot count (`system.spells.
- * spell1` through `spell9`) at each level, on top of whatever dnd5e's normal multiclass math already
- * computed - a rough approximation of "casting as two characters" rather than a mechanically precise
- * per-class pool.
+ * much simpler stand-in, this per-actor opt-in doubles the leveled slot count (`system.spells.spell1`
+ * through `spell9`) at each level, on top of the gestalt-corrected caster level from
+ * `applyGestaltCasterLevel` above - a rough approximation of "casting as two characters" rather than a
+ * mechanically precise per-class pool.
  *
- * Only touches leveled slots, not Pact Magic (`system.spells.pact`), which is already isolated to its
+ * Only doubles leveled slots, not Pact Magic (`system.spells.pact`), which is already isolated to its
  * own casting class's level and doesn't need correction. Skips any spell level the GM has manually
  * overridden (dnd5e's own "Configure Spell Slots" dialog), respecting that as an intentional exact value
- * the same way the HP override respects a manually-set HP max. Adds the pre-doubling max to `value` too
- * (not just doubling max), so already-spent slots stay spent rather than being topped back up - this is
- * always safe since value can never exceed the original max, so value + originalMax can never exceed the
- * new doubled max either.
+ * the same way the HP override respects a manually-set HP max.
+ *
+ * Only `max` is doubled, never `value`. dnd5e writes spent slots back as an *absolute* number read off
+ * the derived data (`ActivityUsage`: `system.spells.spell1.value = slotData.value - 1`; long rest:
+ * `= slot.max`), so anything added to the derived `value` here is banked into the stored value on the
+ * next cast or rest and then added again on the next prepare, growing without limit. That is what
+ * produced the "casting adds purple slots" report.
+ *
+ * The clamp afterwards is both a guard against that class of bug and the repair for characters already
+ * carrying an inflated stored value from before it was fixed: dnd5e clamps single-level slots itself
+ * (`SingleLevelSpellcasting#prepareSlots`) but not leveled ones, so a stored 15-of-6 stays 15 forever
+ * otherwise. Clamping the derived value shows the right number immediately, and the next cast or long
+ * rest writes the corrected number back to the stored data. It runs for any gestalt actor, flag on or
+ * off, so turning Double Spell Slots back off still heals the character.
  * @param {Actor5e} actor
  */
-function applyGestaltSpellSlotDoubling(actor) {
+function applyGestaltSpellSlots(actor) {
   if (!isGestaltActor(actor)) return;
-  if (actor.getFlag("dnd5e", GESTALT_FLAG.DOUBLE_SPELL_SLOTS) !== true) return;
 
   const spells = actor.system.spells;
   if (!spells) return;
 
+  const double = actor.getFlag("dnd5e", GESTALT_FLAG.DOUBLE_SPELL_SLOTS) === true;
+
   for (let level = 1; level <= 9; level++) {
     const slot = spells[`spell${level}`];
     if (!slot?.max) continue;
-    if (Number.isNumeric(slot.override)) continue;
 
-    slot.value += slot.max;
-    slot.max *= 2;
+    if (double && !Number.isNumeric(slot.override)) slot.max *= 2;
+    slot.value = Math.clamp(slot.value ?? 0, 0, slot.max);
   }
 }
 

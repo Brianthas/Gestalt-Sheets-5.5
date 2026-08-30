@@ -94,18 +94,24 @@ class's hit dice sit unused, same as the tabletop rule intends.
 ### Spellcasting
 
 - **Pact Magic** (Warlock) is already tracked as a separate pool by the base system, so it's unaffected.
-- Non-pact spell slots (leveled slots from full/half/third casters) still use dnd5e's normal multiclass
-  rule of one shared pool sized off the *summed* caster levels - true separate pools per class would need
-  registering whole new spellcasting types with dnd5e, not a small patch, so that hasn't been built.
+- **Caster level follows character level, not the sum of the classes.** dnd5e's multiclass rule adds every
+  spellcasting class's caster level together, which would make a Wizard 5 / Druid 5 gestalt a level 10
+  caster holding 5th-level slots. Gestalt classes level in lockstep, so the caster level is instead the
+  largest single class's contribution: that Wizard 5 / Druid 5 is a level 5 caster with 4/3/2 slots. Half
+  and third casters are costed as if single-classed, so they round up the way dnd5e's multiclass table
+  doesn't - a Wizard 5 / Paladin 5 scores Paladin at 3 and Wizard at 5, and takes the 5.
+- Beyond that, non-pact spell slots are still one shared pool rather than a separate pool per class - true
+  separate pools would need registering whole new spellcasting types with dnd5e, not a small patch, so
+  that hasn't been built.
 - As a much simpler stand-in, checking **Double Spell Slots** (Special Traits tab, next to Enable Gestalt)
-  doubles the final leveled slot count at every spell level, on top of whatever dnd5e's normal multiclass
-  math already computed. It's a rough approximation of "casting as two characters," not a mechanically
-  precise per-class pool - if you're running two non-pact spellcasting classes and want more exact
-  control, dnd5e's built-in **Configure Spell Slots** override (actor sheet → spellcasting config) can
-  hand-set any level's pool to whatever your table intends instead. Doubling respects any level you've
-  manually overridden that way (an overridden level is left exactly as set, not doubled), and preserves
-  already-spent slots rather than topping them back up (it adds the pre-doubling max to the remaining
-  value, not to the max alone).
+  doubles the slot count at every leveled spell level, so that Wizard 5 / Druid 5 gets 8/6/4. It's a rough
+  approximation of "casting as two characters," not a mechanically precise per-class pool - if you're
+  running two non-pact spellcasting classes and want more exact control, dnd5e's built-in **Configure
+  Spell Slots** override (actor sheet → spellcasting config) can hand-set any level's pool to whatever
+  your table intends instead. Doubling respects any level you've overridden that way (an overridden level
+  is left exactly as set, not doubled).
+- Doubling raises the maximum only. A character with slots already spent keeps them spent and picks the
+  new total up on their next long rest, rather than being topped back up the moment the box is ticked.
 
 ### Level-up reminders
 
