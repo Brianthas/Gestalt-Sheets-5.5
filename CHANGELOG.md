@@ -3,6 +3,22 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [1.1.1] - 2026-08-30
+
+Documentation only. No code changed; this exists so the packaged module carries the corrected README,
+which was rewritten after 1.1.0 was built.
+
+### Changed
+- README trimmed from roughly 2960 words to 1700. The reasoning behind the design moved to
+  `docs/design-notes.md`; every user-facing behaviour and caveat stayed.
+- Corrected three points about the spell count panel that had drifted from what shipped: the prepared
+  column counts spells actually prepared rather than every spell on the sheet, a class publishing
+  neither count gets no row at all rather than no row for one count, and spells added through Browse
+  are assigned to the class whose button was pressed rather than inferred.
+- Documented that the panel needs a Spells tab it recognises, so it appears on dnd5e's own character
+  sheet; a replacement sheet module laying that tab out differently gets no panel and is otherwise
+  untouched.
+
 ## [1.1.0] - 2026-08-30
 
 ### Added
