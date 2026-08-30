@@ -3,6 +3,20 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [1.2.0] - 2026-08-30
+
+### Added
+- The spell count panel now appears on **Tidy 5e Sheets'** modern sheet. Tidy's documented way to add
+  content to it is the `renderActorSheetV2` hook, which this module already used, so this needed one
+  extra selector rather than an API integration: Tidy names the tab `spellbook` where dnd5e names it
+  `spells`. Tidy's classic sheet lays its spellbook out differently and still gets no panel.
+
+### Changed
+- The panel's background and border fall back to translucent values when dnd5e's card tokens are not
+  available, which is the case on another module's sheet. It reads as a card over whatever theme that
+  sheet uses instead of painting a dark slate box onto it. On dnd5e's own sheet the tokens resolve and
+  the panel still matches the Spellcasting card exactly.
+
 ## [1.1.1] - 2026-08-30
 
 Documentation only. No code changed; this exists so the packaged module carries the corrected README,

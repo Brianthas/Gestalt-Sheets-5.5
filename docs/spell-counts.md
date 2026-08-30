@@ -196,12 +196,34 @@ Both spell packs are enabled in a default world, so a class filter returns each 
 
 ## Tidy 5e Sheet
 
-Checked against tidy5e-sheet 13.9.3, both its sheets.
+Checked against tidy5e-sheet 13.9.3.
 
-The panel does not appear on either. Tidy names the tab `spellbook`, not `spells`, and its content
-container is `.tidy-tab.spellbook` behind `a[data-tab-id="spellbook"]`, so the anchor lookup finds
-nothing and the handler skips. Nothing breaks: `renderActorSheetV2` fires on both Tidy sheets, no
-console errors, and the sheets render fully (2142 and 1277 elements).
+The panel works on Tidy's modern (Quadrone) sheet. Tidy's own documentation gives `renderActorSheetV2`
+as the way to add content to it, which is the hook this module already uses, so support needed one
+extra selector rather than an API integration: Tidy names the tab `spellbook` and its container
+`.tidy-tab.spellbook`, where dnd5e uses `[data-tab="spells"]`.
+
+**Tab content is not lazily rendered.** `.tidy-tab.spellbook` is in the DOM from the first render with
+its children present; an inactive tab merely has zero height. An earlier reading of this as lazy came
+from measuring an inactive tab, the same trap as measuring dnd5e's Spells tab before activating it.
+The container also survives switching tabs away and back, so no tab-change hook is needed - though
+Tidy does provide one, `tidy5e-sheet.selectTab(app, element, newTabId)`, if that ever changes.
+
+Tidy's classic sheet is not supported; it uses its own `tidy5e-sheet.renderActorSheet` hook and a
+different layout. It gets no panel and is otherwise untouched.
+
+### Theming across sheets
+
+dnd5e's `--dnd5e-background-card` and `--dnd5e-border-gold` are scoped to its own sheet and do not
+resolve on Tidy, so the CSS fallback is what renders there. Those fallbacks are **translucent**
+(`rgba(0, 0, 0, 0.25)` and a faint white border) rather than the opaque slate they used to be: an
+opaque colour paints a dark card onto whatever theme the other sheet uses, where darkening what is
+behind it reads as a card on any of them. Verified against a maroon Tidy theme (`rgb(116, 27, 43)`).
+
+Text and font tokens - `--color-text-primary`, `--color-text-secondary`, `--color-level-error`, the
+Roboto families - are not sheet-scoped and resolve on both, so the panel's text follows whichever
+theme is active. On dnd5e's own sheet the card tokens still resolve and the panel matches the
+Spellcasting card exactly.
 
 Tidy shows its own per-class prepared counter, and it is correct for gestalt: it reads each class at
 its own level and excludes always-prepared subclass grants. On a Sorcerer 9 / Cleric 9 with Draconic

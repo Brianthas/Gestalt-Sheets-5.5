@@ -116,9 +116,11 @@ Two things are called out rather than silently counted:
   added.
 
 Built for the 2024 classes, which publish both counts. A class publishing neither gets no row rather
-than a guess. The panel needs a Spells tab it recognises, so it appears on dnd5e's own character sheet;
-a replacement sheet module that lays that tab out differently gets no panel, and is otherwise
-untouched.
+than a guess.
+
+Works on dnd5e's own character sheet and on **Tidy 5e Sheets'** modern sheet, following whichever
+theme is active on each. Tidy's classic sheet lays its spellbook out differently and gets no panel; it
+is otherwise untouched.
 
 ### Level-up reminders
 

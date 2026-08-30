@@ -5,11 +5,17 @@
    sheet's light and dark themes instead of pinning one of them. The values mirror the .spellcasting
    card immediately below it in the same tab: card background, gold border, 4px radius, Roboto Slab
    headings, Roboto Condensed labels. */
+/* The fallbacks are translucent on purpose. dnd5e's card and border tokens are scoped to its own
+   sheet, so on a replacement sheet they do not resolve and the fallback is what renders. An opaque
+   colour would paint a dark slate card onto whatever theme that sheet uses; darkening what is behind
+   it instead reads as a card on any of them. On dnd5e's own sheet the tokens resolve and the panel
+   still matches the Spellcasting card exactly. Text and font tokens are not sheet-scoped and follow
+   the active theme on both. */
 .gestalt-spell-counts {
   margin: 0 0 8px;
-  border: var(--dnd5e-border-gold, 1px solid #242731);
+  border: var(--dnd5e-border-gold, 1px solid rgba(255, 255, 255, 0.15));
   border-radius: 4px;
-  background: var(--dnd5e-background-card, #252830);
+  background: var(--dnd5e-background-card, rgba(0, 0, 0, 0.25));
   flex: none;
 }
 

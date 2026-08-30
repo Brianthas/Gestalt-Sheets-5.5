@@ -911,7 +911,11 @@ function renderSpellCountPanel(sheet, element) {
     if (actor?.type !== "character") return;
     if (!isGestaltActor(actor)) return;
 
-    const tab = root.querySelector('[data-tab="spells"]');
+    // dnd5e's own sheet names the tab "spells"; Tidy 5e's modern sheet calls it "spellbook" and marks
+    // its container `.tidy-tab.spellbook`. Both are present in the DOM from the first render - an
+    // inactive tab is merely zero-height, not absent - so one selector list covers both without
+    // waiting on a tab-change hook.
+    const tab = root.querySelector('[data-tab="spells"], .tidy-tab.spellbook');
     if (!tab?.prepend) return;
 
     const tally = tallySpells(actor);
