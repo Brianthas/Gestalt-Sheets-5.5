@@ -146,10 +146,12 @@ Hooks.once("init", () => {
 
 Hooks.on("updateItem", onUpdateClassItem);
 
-// Foundry fires a render hook for every class in the sheet's prototype chain; `CharacterActorSheet`
-// is the most specific one, so it fires once per render of a player character sheet and never for
-// NPCs or vehicles.
-Hooks.on("renderCharacterActorSheet", renderSpellCountPanel);
+// Foundry fires a render hook for every class in the sheet's prototype chain. `ActorSheetV2` is the
+// broadest one that still means "an actor sheet", so this catches dnd5e's own character sheet and
+// any replacement sheet built on ApplicationV2 (Tidy5e and friends) rather than only dnd5e's
+// `CharacterActorSheet`. Sheets that do not present a `[data-tab="spells"]` element get nothing
+// injected; the handler feature-detects its anchor instead of assuming dnd5e's markup.
+Hooks.on("renderActorSheetV2", renderSpellCountPanel);
 
 /* -------------------------------------------- */
 /*  Notifications                                */
@@ -699,10 +701,20 @@ function tallySpells(actor) {
  */
 function buildSpellCountPanel(tally) {
   const panel = document.createElement("section");
-  panel.classList.add(SPELL_PANEL_CLASS);
+  // `card` is dnd5e's own container class, the one its Spellcasting panel in this same tab uses.
+  // Wearing it means the sheet styles the box and its heading, in whichever theme is active, instead
+  // of this module re-deriving those colours and drifting from them. A sheet that does not define
+  // `card` simply ignores it and the stylesheet's own values apply.
+  panel.classList.add(SPELL_PANEL_CLASS, "card");
 
-  const header = document.createElement("h3");
-  header.textContent = game.i18n.localize("GESTALT.SpellCounts.Title");
+  // dnd5e's own card puts its title in `div.header > h3` and colours the wrapper, letting the heading
+  // inherit. Matching that structure is what makes the title the same colour as the Spellcasting card
+  // beside it, in either theme, without this module naming a colour at all.
+  const header = document.createElement("div");
+  header.classList.add("header");
+  const title = document.createElement("h3");
+  title.textContent = game.i18n.localize("GESTALT.SpellCounts.Title");
+  header.append(title);
   panel.append(header);
 
   const body = document.createElement("div");
@@ -810,8 +822,9 @@ function buildSpellCountPanel(tally) {
  * @param {string} spellList  Spell list key, e.g. "class:wizard".
  */
 async function browseClassSpells(actor, spellList) {
+  const browser = dnd5e.applications?.CompendiumBrowser;
   const list = dnd5e.registry?.spellLists?.forType(spellList);
-  if (!list?.identifiers?.size) {
+  if (!list?.identifiers?.size || (typeof browser?.select !== "function")) {
     ui.notifications.warn(game.i18n.localize("GESTALT.SpellCounts.NoList"));
     return;
   }
@@ -819,7 +832,7 @@ async function browseClassSpells(actor, spellList) {
   // `locked.additional` is keyed by filter name, not a list of raw filter descriptors - the browser
   // reads `filters.locked.additional[key]` per registered filter. `spelllist` is dnd5e's own filter
   // for this, so its own `createFilter` turns the value into the identifier match.
-  const results = await dnd5e.applications.CompendiumBrowser.select({
+  const results = await browser.select({
     filters: {
       locked: {
         documentClass: "Item",
@@ -840,32 +853,52 @@ async function browseClassSpells(actor, spellList) {
  *
  * ApplicationV2 re-renders in place and leaves whatever a module added behind, so the previous panel
  * is removed before a new one is appended. Without that it accumulates one copy per render.
+ *
+ * Written to survive an unfamiliar sheet rather than to assume dnd5e's own markup, since a
+ * replacement sheet module can change any of it. The whole body is wrapped: a module that adds a
+ * panel to someone else's sheet must never be the reason that sheet fails to render, so anything
+ * unexpected is logged and skipped, leaving the sheet exactly as the other module drew it. Everything
+ * needed is feature-detected - the element may arrive as jQuery from a legacy sheet, the actor may
+ * not be a character, and the Spells tab may be absent or named differently, and each of those is a
+ * reason to do nothing rather than to guess.
  * @param {ActorSheet} sheet
- * @param {HTMLElement} element
+ * @param {HTMLElement|jQuery} element
  */
 function renderSpellCountPanel(sheet, element) {
-  const actor = sheet.document;
-  for (const stale of element.querySelectorAll(`.${SPELL_PANEL_CLASS}`)) stale.remove();
+  try {
+    const root = element?.jquery ? element[0] : element;
+    if (!root?.querySelectorAll) return;
 
-  if (!isGestaltActor(actor)) return;
-  const tab = element.querySelector('[data-tab="spells"]');
-  if (!tab) return;
+    // Remove our own previous panel before anything else, so a later bail-out cannot strand a stale
+    // one on the sheet.
+    for (const stale of root.querySelectorAll(`.${SPELL_PANEL_CLASS}`)) stale.remove();
 
-  const tally = tallySpells(actor);
-  if (!tally.rows.length) return;
+    const actor = sheet?.document ?? sheet?.actor;
+    if (actor?.type !== "character") return;
+    if (!isGestaltActor(actor)) return;
 
-  const panel = buildSpellCountPanel(tally);
-  panel.addEventListener("click", event => {
-    const button = event.target.closest(".gestalt-spell-browse");
-    if (!button) return;
-    event.preventDefault();
-    browseClassSpells(actor, button.dataset.spellList);
-  });
-  panel.addEventListener("change", event => {
-    const select = event.target.closest(".gestalt-spell-assign-select");
-    if (!select?.value) return;
-    actor.items.get(select.dataset.spellId)?.update({ "system.sourceItem": select.value });
-  });
+    const tab = root.querySelector('[data-tab="spells"]');
+    if (!tab?.prepend) return;
 
-  tab.prepend(panel);
+    const tally = tallySpells(actor);
+    if (!tally.rows.length) return;
+
+    const panel = buildSpellCountPanel(tally);
+    panel.addEventListener("click", event => {
+      const button = event.target.closest(".gestalt-spell-browse");
+      if (!button) return;
+      event.preventDefault();
+      browseClassSpells(actor, button.dataset.spellList);
+    });
+    panel.addEventListener("change", event => {
+      const select = event.target.closest(".gestalt-spell-assign-select");
+      if (!select?.value) return;
+      actor.items.get(select.dataset.spellId)?.update({ "system.sourceItem": select.value });
+    });
+
+    tab.prepend(panel);
+  } catch (err) {
+    console.error(`${MODULE_ID} | Could not add the spell count panel to this sheet. The rest of the `
+      + "sheet is unaffected; this is usually a sheet module laying out the Spells tab differently.", err);
+  }
 }

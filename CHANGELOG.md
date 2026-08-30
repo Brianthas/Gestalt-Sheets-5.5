@@ -21,6 +21,15 @@ All notable changes to this module are documented here. Versions follow the modu
   It writes the same Source Class field the spell's own Details tab edits. Spells on none of the
   character's class lists are named separately, since that usually means the wrong spell was added.
 
+The panel wears dnd5e's own `card` class and uses the sheet's colour and font tokens rather than its
+own, so it matches the Spellcasting card beside it and follows the light and dark themes. Its body
+has a bounded height and scrolls once the picker list grows.
+
+It attaches to any ApplicationV2 actor sheet rather than only dnd5e's, so a replacement sheet module
+gets it too where that sheet presents a Spells tab. Everything it needs is feature-detected and the
+whole injection is wrapped: on a sheet laid out differently it logs and skips, leaving that sheet
+exactly as its own module drew it.
+
 ## [1.0.3] - 2026-08-30
 
 From a report that a class added second to a gestalt character only received the multiclassing

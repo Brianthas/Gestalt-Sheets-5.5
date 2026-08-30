@@ -114,19 +114,43 @@ is `{ spelllist: { "class:wizard": 1 } }`, where 1 includes and -1 excludes. Pas
 
 ## Rendering
 
-Hooked on `renderCharacterActorSheet`, the most specific class in the sheet's prototype chain, so it
-fires once per character sheet render and never for NPCs or vehicles. The handler receives
-`(sheet, HTMLElement, context, options)`.
+Hooked on `renderActorSheetV2`, not dnd5e's `renderCharacterActorSheet`. Foundry fires a render hook
+for every class in the sheet's prototype chain, and `ActorSheetV2` is the broadest one that still
+means "an actor sheet", so a replacement sheet module built on ApplicationV2 gets the panel too. The
+handler receives `(sheet, HTMLElement, context, options)`, or jQuery as the second argument from a
+legacy sheet, which it normalises.
+
+Nothing about dnd5e's markup is assumed. The actor type, the gestalt flag and the
+`[data-tab="spells"]` anchor are each feature-detected, and the whole body is wrapped in a
+`try`/`catch` that logs and returns. A module adding a panel to someone else's sheet must never be
+the reason that sheet fails to render, so an unfamiliar layout means no panel rather than a broken
+tab. The stale-panel removal runs before any of those checks, so a later bail-out cannot strand one.
 
 The panel is prepended to `[data-tab="spells"]`. **ApplicationV2 re-renders in place and does not
 clean up after a module**, so `renderSpellCountPanel` removes any existing `.gestalt-spell-counts`
 before appending. Without that it accumulates one copy per render.
 
 The body has `max-height` and `overflow-y: auto` with `min-height: 0`, since a character with several
-casting classes and a long unassigned list would otherwise push the rest of the tab out of reach.
+casting classes and a long picker list would otherwise push the rest of the tab out of reach.
 
 Values are inserted as text nodes rather than interpolated into a markup string, so a spell named with
 angle brackets cannot inject into the sheet.
+
+## Styling
+
+The panel carries dnd5e's own `card` class and puts its title in `div.header > h3`, which is the
+structure the Spellcasting card in the same tab uses. dnd5e colours that wrapper and lets the heading
+inherit - no CSS rule sets a colour on the card's `h3` at all - so matching the structure is what
+makes the title the right colour, in whichever theme is active, without this module naming one.
+
+Every remaining value in `styles/gestalt.css` is a sheet token rather than a literal:
+`--dnd5e-background-card`, `--dnd5e-border-gold`, `--dnd5e-border-dotted`, `--color-text-primary`,
+`--color-text-secondary`, `--color-level-error`, and the Roboto Slab / Roboto Condensed families.
+Using `--dnd5e-color-card` here is the mistake to avoid: it is the light parchment colour, and it
+renders the panel as a white slab on a dark sheet.
+
+Buttons match `--dnd5e-background-25` rather than a default Foundry button, which draws as a heavy
+black rectangle against the card.
 
 ## Testing notes
 

@@ -1,97 +1,133 @@
 /* Gestalt Sheets 5.5 */
 
-/* Spell count panel, injected at the top of a gestalt character's Spells tab. */
+/* Spell count panel, injected at the top of a gestalt character's Spells tab.
+   Every colour and font here is a dnd5e sheet token rather than a literal, so the panel follows the
+   sheet's light and dark themes instead of pinning one of them. The values mirror the .spellcasting
+   card immediately below it in the same tab: card background, gold border, 4px radius, Roboto Slab
+   headings, Roboto Condensed labels. */
 .gestalt-spell-counts {
-  margin: 0 0 0.5rem;
-  padding: 0.4rem 0.5rem;
-  border: 1px solid var(--dnd5e-color-faint, rgba(0, 0, 0, 0.1));
+  margin: 0 0 8px;
+  border: var(--dnd5e-border-gold, 1px solid #242731);
   border-radius: 4px;
-  background: var(--dnd5e-color-card, rgba(0, 0, 0, 0.03));
+  background: var(--dnd5e-background-card, #252830);
   flex: none;
 }
 
+/* No colour here on purpose: the panel carries dnd5e's `card` class, so the sheet's own `.card h3`
+   rule supplies the heading colour for whichever theme is active. */
 .gestalt-spell-counts h3 {
-  margin: 0 0 0.3rem;
+  margin: 0;
+  padding: 8px 8px 4px;
   border: none;
-  font-size: var(--font-size-13, 0.8rem);
+  font-family: var(--dnd5e-font-roboto-slab, "Roboto Slab", serif);
+  font-size: var(--font-size-13, 0.8125rem);
   font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-/* Bounded height with its own scrollbar, so a character with several casting classes and a long
-   list of unassigned spells cannot push the rest of the tab out of reach. min-height:0 is required
-   for this to shrink inside the sheet's flex column. */
+/* Bounded height with its own scrollbar, decided here rather than when it overflows: a character
+   with several casting classes and a long picker list would otherwise push the spell list itself out
+   of reach. min-height is required for this to shrink inside the tab's flex column. */
 .gestalt-spell-counts-body {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  max-height: 11rem;
+  max-height: 12rem;
   min-height: 0;
+  padding: 0 8px 8px;
   overflow-y: auto;
 }
 
 .gestalt-spell-row {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-  font-size: var(--font-size-13, 0.8rem);
+  gap: 12px;
+  padding: 3px 0;
+  font-family: var(--dnd5e-font-roboto, Roboto, sans-serif);
+  font-size: var(--font-size-13, 0.8125rem);
+  color: var(--color-text-primary, #cfd2da);
+}
+
+.gestalt-spell-row + .gestalt-spell-row {
+  border-top: var(--dnd5e-border-dotted, 1px dotted #434857);
 }
 
 .gestalt-spell-class {
+  flex: 0 0 8rem;
+  font-family: var(--dnd5e-font-roboto-slab, "Roboto Slab", serif);
   font-weight: bold;
-  min-width: 7rem;
 }
 
 .gestalt-spell-count {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.25rem;
+  gap: 4px;
 }
 
 .gestalt-spell-label {
-  opacity: 0.7;
+  font-family: var(--dnd5e-font-roboto-condensed, "Roboto Condensed", sans-serif);
+  font-size: var(--font-size-11, 0.6875rem);
+  text-transform: uppercase;
+  color: var(--color-text-secondary, #999);
 }
 
 .gestalt-spell-value {
+  font-family: var(--dnd5e-font-roboto-slab, "Roboto Slab", serif);
   font-variant-numeric: tabular-nums;
 }
 
-/* Only a wrong count is coloured; a correct row stays plain so the eye goes to the problem. */
+/* Only a wrong count is coloured, so the eye goes to the problem rather than to the panel. */
 .gestalt-spell-mismatch {
-  color: var(--dnd5e-color-maroon, #6c0000);
+  color: var(--color-level-error, #ce0707);
   font-weight: bold;
 }
 
+/* Matches the sheet's own .radio-button rather than a default Foundry button, which renders as a
+   heavy black slab against the card. */
 .gestalt-spell-browse {
+  flex: none;
   margin-left: auto;
-  padding: 0 0.4rem;
+  padding: 2px 8px;
   width: auto;
-  line-height: 1.4;
-  font-size: var(--font-size-11, 0.7rem);
+  border: none;
+  border-radius: 4px;
+  background: var(--dnd5e-background-25, rgba(0, 0, 0, 0.25));
+  font-family: var(--dnd5e-font-roboto-condensed, "Roboto Condensed", sans-serif);
+  font-size: var(--font-size-11, 0.6875rem);
+  line-height: 1.6;
+  color: var(--color-text-primary, #cfd2da);
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
+.gestalt-spell-browse:hover {
+  background: var(--dnd5e-background-45, rgba(0, 0, 0, 0.45));
+  box-shadow: none;
+}
+
 .gestalt-spell-note {
-  font-size: var(--font-size-11, 0.7rem);
-  opacity: 0.85;
+  padding: 6px 0 2px;
+  font-family: var(--dnd5e-font-roboto, Roboto, sans-serif);
+  font-size: var(--font-size-11, 0.6875rem);
+  color: var(--color-text-secondary, #999);
 }
 
 .gestalt-spell-assign {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding-left: 0.6rem;
-  font-size: var(--font-size-11, 0.7rem);
+  gap: 8px;
+  padding: 2px 0 2px 8px;
+  font-size: var(--font-size-12, 0.75rem);
+  color: var(--color-text-primary, #cfd2da);
 }
 
 .gestalt-spell-assign-name {
   flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .gestalt-spell-assign-select {
-  flex: 0 0 9rem;
-  height: 1.4rem;
-  font-size: var(--font-size-11, 0.7rem);
+  flex: 0 0 10rem;
+  height: 1.5rem;
+  font-size: var(--font-size-12, 0.75rem);
 }
