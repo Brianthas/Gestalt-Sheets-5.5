@@ -1,0 +1,142 @@
+# Spell counts
+
+Engineering record for the spell count panel in `scripts/gestalt.mjs`. Everything below was checked
+against Foundry 14.365 / dnd5e 5.3.3 with the `dnd5e.classes24` and `dnd5e.spells24` compendia.
+
+## What the feature answers
+
+Whether a gestalt character has the right number of spells. The target is per class, each class
+counts at its own level rather than a summed multiclass level, and subclass-granted spells sit in the
+same list without counting against any limit. None of that is visible on the sheet.
+
+Scope is the 2024 ruleset. That is what the module is for, and it means every target is readable from
+the class item instead of being asserted here.
+
+## Where the targets come from
+
+Each 2024 caster publishes its counts as ScaleValue advancements, read as
+`classItem.scaleValues[identifier].value` in `spellTargetsForClass`:
+
+```
+             max-prepared (lv 1/5/11/20)   cantrips-known (lv 1/5/11/20)
+Bard         4 / 9 / 16 / 22               2 / 3 / 4 / 4
+Cleric       4 / 9 / 16 / 22               3 / 4 / 5 / 5
+Druid        4 / 9 / 16 / 22               2 / 3 / 4 / 4
+Sorcerer     2 / 9 / 16 / 22               4 / 5 / 6 / 6
+Wizard       4 / 9 / 16 / 25               3 / 4 / 5 / 5
+Warlock      2 / 6 / 11 / 15               2 / 3 / 4 / 4     ("Max Pact Magic Spells")
+Paladin      2 / 6 / 10 / 15               -
+Ranger       2 / 6 / 10 / 15               -
+```
+
+Wizard reaches 25 prepared at level 20 where every other full caster stops at 22, and Paladin and
+Ranger have no cantrip entry at all. Both are reasons the numbers are read rather than tabulated
+here. A class publishing no value for a count shows no row for it.
+
+The 2024 Wizard exposes no spellbook size, so the panel has no spellbook row.
+
+## Excluding granted spells
+
+`system.preparation` does not exist in dnd5e 5.3.3. Spells carry `system.method` and
+`system.prepared`, a number whose states are in `CONFIG.DND5E.spellPreparationStates`: 0 unprepared,
+1 prepared, 2 always prepared.
+
+`SpellConfigurationData#applySpellChanges` (dnd5e.mjs:41443) stamps `prepared` from the granting
+advancement, and only when that grant sets a method:
+
+```js
+if ( this.method ) {
+  setProperty(itemData, "system.method", this.method);
+  setProperty(itemData, "system.prepared", this.prepared);
+}
+```
+
+Applying the real grants on level 5 actors produced:
+
+```
+Sorcerer 5 / Draconic Sorcery   6 spells, prepared=2, sourceItem="subclass:draconic", method=spell
+Warlock 5 / Fiend Patron        6 spells, prepared=2, sourceItem="subclass:fiend",    method=pact
+```
+
+**Cantrips ship from the compendium already at `prepared = 2`** - Fire Bolt, Druidcraft and Guidance
+all do, with no actor involved. So `isGrantedSpell` tests `level > 0 && prepared === 2`. Dropping the
+level check reports zero cantrips known on every character.
+
+The 2014 subclasses grant no spells at all; Draconic Bloodline and The Fiend both produced zero at
+level 5. The exclusion only does anything on 2024 content.
+
+## Attributing a spell to a class
+
+`SpellData#_preCreate` (dnd5e.mjs:22621) sets `system.sourceItem` to `"<type>:<identifier>"` when a
+spell is created, in four steps: skip at-will/innate or an already-set value; match an alt method
+such as pact to the one class using it; use the only spellcasting class if there is one; otherwise
+intersect the actor's casting classes with the classes whose spell list contains the spell, through
+`dnd5e.registry.spellLists.forSpell(compendiumSource)`.
+
+The fourth step carries gestalt. Dropping seven spells on a Wizard 5 / Druid 5:
+
+```
+Magic Missile  class:wizard      Entangle     class:druid
+Shield         class:wizard      Cure Wounds  class:druid
+Fire Bolt      class:wizard      Druidcraft   class:druid
+Fireball       class:wizard
+```
+
+`spellSourceClass` reads that field and resolves a `subclass:` value through the subclass item's
+`classIdentifier`, so a Draconic Sorcery grant counts as Sorcerer. `SpellData#sourceClass` does the
+same job but is deprecated in 5.3 (dnd5e.mjs:22042) and logs a compatibility warning on every read.
+
+`sourceItem` stays blank in three cases, and the panel separates them:
+
+- The spell is on more than one of the character's class lists. For an overlapping pair such as
+  Sorcerer/Wizard this is most of them, so these get a class picker writing `system.sourceItem` - the
+  same field the spell's Details tab edits (`templates/items/details/details-spell.hbs:66`).
+- The spell is on none of the character's lists. Named separately, since it usually means the wrong
+  spell was added.
+- The spell has no `_stats.compendiumSource` - hand-made, or copied from another actor - so step four
+  has nothing to look up.
+
+## Browse buttons
+
+The class spell lists are registered and complete: Bard 129, Cleric 109, Druid 124, Paladin 38,
+Ranger 48, Sorcerer 141, Warlock 72, Wizard 219, plus eight subclass lists. dnd5e registers a
+`spelllist` filter on the browser's spells tab (dnd5e.mjs:21977) but the player has to know to set
+it, against 659 spells unfiltered.
+
+`browseClassSpells` calls `dnd5e.applications.CompendiumBrowser.select()` with that filter locked.
+The browser is the system's; the only addition is the filter. Results come back as compendium
+documents, so `_preCreate` attributes them on creation.
+
+`filters.locked.additional` is keyed by filter name, not a list of raw filter descriptors - the
+browser reads `filters.locked.additional[key]` per registered filter (dnd5e.mjs:33040). The payload
+is `{ spelllist: { "class:wizard": 1 } }`, where 1 includes and -1 excludes. Passing an array of
+`{k, o, v}` descriptors produces a button that opens an unfiltered browser.
+
+## Rendering
+
+Hooked on `renderCharacterActorSheet`, the most specific class in the sheet's prototype chain, so it
+fires once per character sheet render and never for NPCs or vehicles. The handler receives
+`(sheet, HTMLElement, context, options)`.
+
+The panel is prepended to `[data-tab="spells"]`. **ApplicationV2 re-renders in place and does not
+clean up after a module**, so `renderSpellCountPanel` removes any existing `.gestalt-spell-counts`
+before appending. Without that it accumulates one copy per render.
+
+The body has `max-height` and `overflow-y: auto` with `min-height: 0`, since a character with several
+casting classes and a long unassigned list would otherwise push the rest of the tab out of reach.
+
+Values are inserted as text nodes rather than interpolated into a markup string, so a spell named with
+angle brackets cannot inject into the sheet.
+
+## Testing notes
+
+A test that builds spell items from `toObject()` alone will show every spell unassigned and prove
+nothing: `toObject()` drops `_stats.compendiumSource`, which is what dnd5e's attribution looks the
+spell up by. Set it to the spell's UUID to reproduce a drag-drop.
+
+`ItemGrantAdvancement#apply(level, {}, { initial: true })` selects every non-optional grant itself,
+the way an automatic Advancement Manager step does, and writes through `updateSource` - so the
+results are in `actor._source.items` until persisted.
+
+Both spell packs are enabled in a default world, so a class filter returns each spell twice (Wizard's
+219 identifiers fetch 426 rows). That is pre-existing and visible in dnd5e's own browser.
