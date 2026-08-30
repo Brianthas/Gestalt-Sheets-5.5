@@ -114,6 +114,31 @@ class's hit dice sit unused, same as the tabletop rule intends.
 - Doubling raises the maximum only. A character with slots already spent keeps them spent and picks the
   new total up on their next long rest, rather than being topped back up the moment the box is ticked.
 
+### Spell counts
+
+A panel at the top of a gestalt character's **Spells** tab shows, for each spellcasting class, how
+many cantrips and prepared spells they should have against how many they do. Only a wrong number is
+coloured. The targets are read from the class item's own progression, so they are whatever the class
+says they are rather than a table kept in this module.
+
+Built for the 2024 classes, which publish both counts. A 2014 class that does not publish them shows
+no row for that count instead of a guess.
+
+Spells granted by a subclass, such as Draconic Sorcery's or a Life Domain's, are always-prepared and
+do not count against the limit, so they are excluded and reported as a total at the bottom.
+
+Each class row has a **Browse** button that opens dnd5e's own compendium browser filtered to that
+class's spell list, rather than the several hundred spells in the world. Anything added that way is
+attributed to the right class automatically.
+
+Two things get called out rather than silently counted:
+
+- **Spells on more than one of your classes' lists** get a class picker, because dnd5e cannot know
+  which one a Sorcerer/Wizard's Magic Missile belongs to. Choosing writes the same Source Class field
+  the spell's own Details tab edits.
+- **Spells on none of your classes' lists** are named, since that usually means the wrong spell was
+  added.
+
 ### Level-up reminders
 
 Whenever a gestalt actor's class levels change, the acting user gets a reminder listing any *other*

@@ -146,6 +146,11 @@ Hooks.once("init", () => {
 
 Hooks.on("updateItem", onUpdateClassItem);
 
+// Foundry fires a render hook for every class in the sheet's prototype chain; `CharacterActorSheet`
+// is the most specific one, so it fires once per render of a player character sheet and never for
+// NPCs or vehicles.
+Hooks.on("renderCharacterActorSheet", renderSpellCountPanel);
+
 /* -------------------------------------------- */
 /*  Notifications                                */
 /* -------------------------------------------- */
@@ -577,3 +582,290 @@ function checkSecondaryClassAsiOverlap(actor, item, baseClass) {
   }));
 }
 
+/* -------------------------------------------- */
+/*  Spell counts                                */
+/* -------------------------------------------- */
+
+const SPELL_PANEL_CLASS = "gestalt-spell-counts";
+
+/**
+ * Read a class item's spell-count targets. The 2024 classes publish both numbers as ScaleValue
+ * advancements, so they are read from the class rather than kept as a table here: Wizard's prepared
+ * count reaches 25 where every other full caster stops at 22, and Paladin and Ranger have no cantrip
+ * entry at all, which a hardcoded table would get wrong.
+ * @param {Item5e} cls
+ * @returns {{prepared: number|null, cantrips: number|null}}
+ */
+function spellTargetsForClass(cls) {
+  const read = identifier => {
+    const value = cls.scaleValues?.[identifier]?.value;
+    return Number.isFinite(value) ? value : null;
+  };
+  return { prepared: read("max-prepared"), cantrips: read("cantrips-known") };
+}
+
+/**
+ * Which class a spell counts against, as a class identifier.
+ *
+ * dnd5e records this on the spell itself as `system.sourceItem`, an `"<type>:<identifier>"` string it
+ * fills in when the spell is created (`SpellData#_preCreate`): from the only spellcasting class if
+ * there is one, otherwise by intersecting the actor's casting classes with the classes whose spell
+ * list contains the spell. On a gestalt character that intersection is what resolves it, so a Wizard
+ * spell lands on the Wizard and a Druid spell on the Druid with no input from the player.
+ *
+ * A `subclass:` value is resolved through that subclass's `classIdentifier`, so a Draconic Sorcery
+ * grant counts as Sorcerer. `SpellData#sourceClass` does the same job but is deprecated in dnd5e 5.3
+ * and logs a compatibility warning on every read, so the resolution is done here instead.
+ * @param {Actor5e} actor
+ * @param {Item5e} spell
+ * @returns {string|null}  Class identifier, or null when the spell is not attributed to one.
+ */
+function spellSourceClass(actor, spell) {
+  const sourceItem = spell.system.sourceItem;
+  if (!sourceItem) return null;
+
+  const [type, identifier] = sourceItem.split(":");
+  if (type === "class") return identifier;
+  if (type !== "subclass") return null;
+
+  const subclass = actor.itemTypes.subclass.find(s => s.system.identifier === identifier);
+  return subclass?.system.classIdentifier ?? null;
+}
+
+/**
+ * Whether a spell is granted rather than chosen, and so does not count against a limit.
+ *
+ * A grant stamps `system.prepared` to 2 ("always prepared") through
+ * `SpellConfigurationData#applySpellChanges`. The level check is not redundant: cantrips ship from
+ * the compendium already at 2, so testing `prepared === 2` alone would discard every cantrip and
+ * report none known.
+ * @param {Item5e} spell
+ * @returns {boolean}
+ */
+function isGrantedSpell(spell) {
+  return (spell.system.level > 0) && (spell.system.prepared === 2);
+}
+
+/**
+ * Tally an actor's spells against what each spellcasting class should have.
+ * @param {Actor5e} actor
+ * @returns {{rows: object[], unassigned: Item5e[], uncastable: Item5e[], granted: number}}
+ */
+function tallySpells(actor) {
+  const rows = [];
+  const counts = {};
+  for (const [identifier, cls] of Object.entries(actor.spellcastingClasses ?? {})) {
+    counts[identifier] = { cantrips: 0, prepared: 0 };
+    rows.push({ identifier, name: cls.name, level: cls.system.levels, ...spellTargetsForClass(cls) });
+  }
+  if (!rows.length) return { rows, unassigned: [], uncastable: [], granted: 0 };
+
+  // A spell none of the character's classes can cast is a different problem from one that needs a
+  // choice between two of them, so the two are reported separately rather than both as "unassigned".
+  const castable = spell => {
+    const source = spell._stats?.compendiumSource;
+    if (!source) return true;
+    const lists = Array.from(dnd5e.registry?.spellLists?.forSpell(source) ?? [])
+      .map(list => list?.metadata?.identifier ?? list?.identifier);
+    if (!lists.length) return true;
+    return rows.some(row => lists.includes(row.identifier));
+  };
+
+  const unassigned = [];
+  const uncastable = [];
+  let granted = 0;
+
+  for (const spell of actor.itemTypes.spell) {
+    if (!CONFIG.DND5E.spellcasting[spell.system.method]?.slots) continue;
+    if (isGrantedSpell(spell)) { granted += 1; continue; }
+
+    const identifier = spellSourceClass(actor, spell);
+    if (!identifier || !counts[identifier]) {
+      (castable(spell) ? unassigned : uncastable).push(spell);
+      continue;
+    }
+    counts[identifier][spell.system.level === 0 ? "cantrips" : "prepared"] += 1;
+  }
+
+  for (const row of rows) row.has = counts[row.identifier];
+  return { rows, unassigned, uncastable, granted };
+}
+
+/**
+ * Build the panel. Values go in as text nodes rather than interpolated into a markup string, so a
+ * spell named with angle brackets cannot inject anything into the sheet.
+ * @param {object} tally
+ * @returns {HTMLElement}
+ */
+function buildSpellCountPanel(tally) {
+  const panel = document.createElement("section");
+  panel.classList.add(SPELL_PANEL_CLASS);
+
+  const header = document.createElement("h3");
+  header.textContent = game.i18n.localize("GESTALT.SpellCounts.Title");
+  panel.append(header);
+
+  const body = document.createElement("div");
+  body.classList.add("gestalt-spell-counts-body");
+  panel.append(body);
+
+  const cell = (parent, text, ...classes) => {
+    const span = document.createElement("span");
+    span.textContent = text;
+    if (classes.length) span.classList.add(...classes);
+    parent.append(span);
+    return span;
+  };
+
+  for (const row of tally.rows) {
+    const line = document.createElement("div");
+    line.classList.add("gestalt-spell-row");
+
+    cell(line, `${row.name} ${row.level}`, "gestalt-spell-class");
+
+    for (const [key, labelKey] of [["cantrips", "Cantrips"], ["prepared", "Prepared"]]) {
+      if (row[key] === null) continue;
+      const group = document.createElement("span");
+      group.classList.add("gestalt-spell-count");
+      cell(group, game.i18n.localize(`GESTALT.SpellCounts.${labelKey}`), "gestalt-spell-label");
+      const value = cell(group, `${row.has[key]} / ${row[key]}`, "gestalt-spell-value");
+      if (row.has[key] !== row[key]) value.classList.add("gestalt-spell-mismatch");
+      line.append(group);
+    }
+
+    const browse = document.createElement("button");
+    browse.type = "button";
+    browse.classList.add("gestalt-spell-browse");
+    browse.dataset.spellList = `class:${row.identifier}`;
+    browse.textContent = game.i18n.format("GESTALT.SpellCounts.Browse", { name: row.name });
+    line.append(browse);
+
+    body.append(line);
+  }
+
+  // An unassigned spell gets a class picker rather than only a warning. dnd5e leaves `sourceItem`
+  // blank whenever a spell is on more than one of the character's class lists, which for an
+  // overlapping pair like Sorcerer/Wizard is most of them, so this is the common path and not an
+  // afterthought. The picker writes the same field the spell sheet's Details tab edits.
+  if (tally.unassigned.length) {
+    const line = document.createElement("div");
+    line.classList.add("gestalt-spell-note");
+    cell(line, game.i18n.format("GESTALT.SpellCounts.Unassigned", { count: tally.unassigned.length }));
+    body.append(line);
+
+    for (const spell of tally.unassigned) {
+      const row = document.createElement("div");
+      row.classList.add("gestalt-spell-assign");
+      cell(row, spell.name, "gestalt-spell-assign-name");
+
+      const select = document.createElement("select");
+      select.classList.add("gestalt-spell-assign-select");
+      select.dataset.spellId = spell.id;
+
+      const blank = document.createElement("option");
+      blank.value = "";
+      blank.textContent = game.i18n.localize("GESTALT.SpellCounts.ChooseClass");
+      select.append(blank);
+
+      for (const row2 of tally.rows) {
+        const option = document.createElement("option");
+        option.value = `class:${row2.identifier}`;
+        option.textContent = row2.name;
+        select.append(option);
+      }
+
+      row.append(select);
+      body.append(row);
+    }
+  }
+
+  if (tally.uncastable.length) {
+    const line = document.createElement("div");
+    line.classList.add("gestalt-spell-note");
+    cell(line, game.i18n.format("GESTALT.SpellCounts.Uncastable", {
+      count: tally.uncastable.length,
+      names: tally.uncastable.map(s => s.name).join(", ")
+    }));
+    body.append(line);
+  }
+
+  if (tally.granted) {
+    const line = document.createElement("div");
+    line.classList.add("gestalt-spell-note");
+    cell(line, game.i18n.format("GESTALT.SpellCounts.Granted", { count: tally.granted }));
+    body.append(line);
+  }
+
+  return panel;
+}
+
+/**
+ * Open dnd5e's own compendium browser filtered to one class's spell list, and add what is chosen.
+ *
+ * The browser is the system's, not a copy of it. The only thing added is the spell list filter, which
+ * is otherwise something the player has to know to set by hand out of every spell in the world. What
+ * comes back are compendium documents, so dnd5e stamps `system.sourceItem` itself on creation and the
+ * new spells land in the right class row without further input.
+ * @param {Actor5e} actor
+ * @param {string} spellList  Spell list key, e.g. "class:wizard".
+ */
+async function browseClassSpells(actor, spellList) {
+  const list = dnd5e.registry?.spellLists?.forType(spellList);
+  if (!list?.identifiers?.size) {
+    ui.notifications.warn(game.i18n.localize("GESTALT.SpellCounts.NoList"));
+    return;
+  }
+
+  // `locked.additional` is keyed by filter name, not a list of raw filter descriptors - the browser
+  // reads `filters.locked.additional[key]` per registered filter. `spelllist` is dnd5e's own filter
+  // for this, so its own `createFilter` turns the value into the identifier match.
+  const results = await dnd5e.applications.CompendiumBrowser.select({
+    filters: {
+      locked: {
+        documentClass: "Item",
+        types: new Set(["spell"]),
+        additional: { spelllist: { [spellList]: 1 } }
+      }
+    }
+  });
+  if (!results?.length) return;
+
+  const docs = await Promise.all(results.map(uuid => fromUuid(uuid)));
+  const data = docs.filter(Boolean).map(doc => doc.toObject());
+  if (data.length) await actor.createEmbeddedDocuments("Item", data);
+}
+
+/**
+ * Inject the spell count panel into a gestalt character sheet's Spells tab.
+ *
+ * ApplicationV2 re-renders in place and leaves whatever a module added behind, so the previous panel
+ * is removed before a new one is appended. Without that it accumulates one copy per render.
+ * @param {ActorSheet} sheet
+ * @param {HTMLElement} element
+ */
+function renderSpellCountPanel(sheet, element) {
+  const actor = sheet.document;
+  for (const stale of element.querySelectorAll(`.${SPELL_PANEL_CLASS}`)) stale.remove();
+
+  if (!isGestaltActor(actor)) return;
+  const tab = element.querySelector('[data-tab="spells"]');
+  if (!tab) return;
+
+  const tally = tallySpells(actor);
+  if (!tally.rows.length) return;
+
+  const panel = buildSpellCountPanel(tally);
+  panel.addEventListener("click", event => {
+    const button = event.target.closest(".gestalt-spell-browse");
+    if (!button) return;
+    event.preventDefault();
+    browseClassSpells(actor, button.dataset.spellList);
+  });
+  panel.addEventListener("change", event => {
+    const select = event.target.closest(".gestalt-spell-assign-select");
+    if (!select?.value) return;
+    actor.items.get(select.dataset.spellId)?.update({ "system.sourceItem": select.value });
+  });
+
+  tab.prepend(panel);
+}

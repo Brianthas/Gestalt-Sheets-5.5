@@ -3,6 +3,24 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [1.1.0] - 2026-08-30
+
+### Added
+- **Spell count panel** on a gestalt character's Spells tab. Per spellcasting class, how many cantrips
+  and prepared spells they should have against how many they do, with only a wrong number coloured.
+  Targets are read from each class item's own progression rather than a table kept here, so a Wizard's
+  25 prepared spells at level 20 and Paladin and Ranger having no cantrips are the class's numbers, not
+  this module's. Built for the 2024 classes; a class that publishes no count shows no row for it.
+- Spells granted by a subclass are excluded from the counts and reported as a total, since they are
+  always prepared and do not count against the limit.
+- A **Browse** button per class row, opening dnd5e's own compendium browser filtered to that class's
+  spell list instead of every spell in the world. Spells added that way are attributed to the right
+  class automatically.
+- A class picker for spells that sit on more than one of the character's class lists, which dnd5e
+  leaves unattributed because it cannot know which class a Sorcerer/Wizard's Magic Missile belongs to.
+  It writes the same Source Class field the spell's own Details tab edits. Spells on none of the
+  character's class lists are named separately, since that usually means the wrong spell was added.
+
 ## [1.0.3] - 2026-08-30
 
 From a report that a class added second to a gestalt character only received the multiclassing
