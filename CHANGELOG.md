@@ -21,6 +21,9 @@ All notable changes to this module are documented here. Versions follow the modu
   It writes the same Source Class field the spell's own Details tab edits. Spells on none of the
   character's class lists are named separately, since that usually means the wrong spell was added.
 
+The prepared column counts spells actually prepared (`system.prepared === 1`), not every spell on
+the sheet. Tidy 5e's own per-class counter reads the same way and the two agree.
+
 The panel wears dnd5e's own `card` class and uses the sheet's colour and font tokens rather than its
 own, so it matches the Spellcasting card beside it and follows the light and dark themes. Its body
 has a bounded height and scrolls once the picker list grows.

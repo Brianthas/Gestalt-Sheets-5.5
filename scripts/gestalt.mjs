@@ -686,7 +686,14 @@ function tallySpells(actor) {
       (castable(spell) ? unassigned : uncastable).push(spell);
       continue;
     }
-    counts[identifier][spell.system.level === 0 ? "cantrips" : "prepared"] += 1;
+    if (spell.system.level === 0) {
+      counts[identifier].cantrips += 1;
+    } else if (spell.system.prepared === 1) {
+      // Against the prepared limit, only spells actually prepared count. A spell sitting on the
+      // sheet unprepared is one the character knows, not one they have prepared, and counting those
+      // overstates the number the column is named for.
+      counts[identifier].prepared += 1;
+    }
   }
 
   for (const row of rows) row.has = counts[row.identifier];

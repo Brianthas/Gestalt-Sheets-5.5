@@ -65,6 +65,19 @@ level check reports zero cantrips known on every character.
 The 2014 subclasses grant no spells at all; Draconic Bloodline and The Fiend both produced zero at
 level 5. The exclusion only does anything on 2024 content.
 
+## What the prepared column counts
+
+Spells with `system.prepared === 1`, attributed to that class. Not every spell the character holds:
+a spell sitting on the sheet unprepared is one they know, not one they have prepared, and counting
+those overstates the number the column is named for. Tidy 5e's own per-class counter reads the same
+way, and the two agree on every case checked.
+
+Cantrips are counted separately by `level === 0` with no prepared filter, since they ship at
+`prepared = 2`.
+
+A fixture where every spell is prepared cannot tell this implementation from one that counts spells
+known - the two give the same answer. Mix prepared and unprepared spells or the test proves nothing.
+
 ## Attributing a spell to a class
 
 `SpellData#_preCreate` (dnd5e.mjs:22621) sets `system.sourceItem` to `"<type>:<identifier>"` when a
@@ -164,3 +177,22 @@ results are in `actor._source.items` until persisted.
 
 Both spell packs are enabled in a default world, so a class filter returns each spell twice (Wizard's
 219 identifiers fetch 426 rows). That is pre-existing and visible in dnd5e's own browser.
+## Tidy 5e Sheet
+
+Checked against tidy5e-sheet 13.9.3, both its sheets.
+
+The panel does not appear on either. Tidy names the tab `spellbook`, not `spells`, and its content
+container is `.tidy-tab.spellbook` behind `a[data-tab-id="spellbook"]`, so the anchor lookup finds
+nothing and the handler skips. Nothing breaks: `renderActorSheetV2` fires on both Tidy sheets, no
+console errors, and the sheets render fully (2142 and 1277 elements).
+
+Tidy shows its own per-class prepared counter, and it is correct for gestalt: it reads each class at
+its own level and excludes always-prepared subclass grants. On a Sorcerer 9 / Cleric 9 with Draconic
+Sorcery and Life Domain, 20 granted spells and one prepared spell per class, both Tidy and this panel
+read 1/14. Tidy Quadrone shows one counter per casting class; Tidy Classic shows a single one.
+
+So there is nothing to correct in Tidy. What Tidy has no equivalent for is the cantrip count, the
+class picker for spells on two class lists, the uncastable warning, the granted total, and the
+browse-by-class buttons. Supporting Tidy properly means using its API rather than DOM injection,
+because Quadrone renders tab content lazily - `.tidy-tab.spellbook` does not exist until the tab is
+opened, which is after the render hook has run.
