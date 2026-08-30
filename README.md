@@ -118,9 +118,8 @@ Two things are called out rather than silently counted:
 Built for the 2024 classes, which publish both counts. A class publishing neither gets no row rather
 than a guess.
 
-Works on dnd5e's own character sheet and on **Tidy 5e Sheets'** modern sheet, following whichever
-theme is active on each. Tidy's classic sheet lays its spellbook out differently and gets no panel; it
-is otherwise untouched.
+Works on dnd5e's own character sheet and on both of **Tidy 5e Sheets'** character sheets, modern and
+classic, following whichever theme is active on each.
 
 ### Level-up reminders
 

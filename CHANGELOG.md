@@ -3,6 +3,18 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [1.2.1] - 2026-08-30
+
+Documentation only. No code changed.
+
+### Fixed
+- 1.2.0 said Tidy 5e's **classic** sheet gets no panel. It does get one, and always did in 1.2.0: the
+  selector added for the modern sheet covers classic as well, since both use the same
+  `.tidy-tab.spellbook` container and `renderActorSheetV2` fires for both. The claim came from Tidy's
+  documentation naming a separate hook for classic rather than from testing it. Verified on classic
+  directly: panel on first render, counts matching the documents, theme followed, survives a tab
+  round trip and a live spell change, no console errors.
+
 ## [1.2.0] - 2026-08-30
 
 ### Added

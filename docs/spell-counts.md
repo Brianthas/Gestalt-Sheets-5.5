@@ -209,8 +209,17 @@ from measuring an inactive tab, the same trap as measuring dnd5e's Spells tab be
 The container also survives switching tabs away and back, so no tab-change hook is needed - though
 Tidy does provide one, `tidy5e-sheet.selectTab(app, element, newTabId)`, if that ever changes.
 
-Tidy's classic sheet is not supported; it uses its own `tidy5e-sheet.renderActorSheet` hook and a
-different layout. It gets no panel and is otherwise untouched.
+**Tidy's classic sheet works too, on the same selector.** Its documentation names
+`tidy5e-sheet.renderActorSheet` as the hook for classic, which led to an initial assumption that it
+needed separate handling. It does not: `renderActorSheetV2` fires for the classic sheet as well, and
+classic uses the same `.tidy-tab.spellbook` container as modern, so one selector covers all three
+sheets. Checked directly rather than inferred from the documentation.
+
+Tidy classic's spellbook tab carries about 4px of horizontal overflow of its own, from its
+`.utility-toolbar` and `.tab-footer`. Measured with the panel present and with gestalt turned off, the
+figure is identical (1163 client against 1167 scroll either way), so the panel contributes none of it.
+A test asserting the tab has no horizontal overflow will fail on classic for that reason; assert that
+the panel does not *increase* it.
 
 ### Theming across sheets
 
