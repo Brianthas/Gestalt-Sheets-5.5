@@ -97,9 +97,10 @@ class's hit dice sit unused, same as the tabletop rule intends.
 - **Caster level follows character level, not the sum of the classes.** dnd5e's multiclass rule adds every
   spellcasting class's caster level together, which would make a Wizard 5 / Druid 5 gestalt a level 10
   caster holding 5th-level slots. Gestalt classes level in lockstep, so the caster level is instead the
-  largest single class's contribution: that Wizard 5 / Druid 5 is a level 5 caster with 4/3/2 slots. Half
-  and third casters are costed as if single-classed, so they round up the way dnd5e's multiclass table
-  doesn't - a Wizard 5 / Paladin 5 scores Paladin at 3 and Wizard at 5, and takes the 5.
+  largest single class's contribution: that Wizard 5 / Druid 5 is a level 5 caster with 4/3/2 slots, and a
+  Wizard 5 / Paladin 5 scores Paladin at 3 and Wizard at 5, and takes the 5. Each class is costed as if it
+  were single-classed, which matters for third casters (Eldritch Knight, Arcane Trickster): an Eldritch
+  Knight 4 counts as caster level 2, the way a single-classed one does, rather than being rounded down.
 - Beyond that, non-pact spell slots are still one shared pool rather than a separate pool per class - true
   separate pools would need registering whole new spellcasting types with dnd5e, not a small patch, so
   that hasn't been built.

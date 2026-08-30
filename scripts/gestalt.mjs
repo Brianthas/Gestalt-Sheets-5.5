@@ -361,8 +361,12 @@ function getGestaltAdjustedHpTotal(hpAdvancement, mod) {
  * The replacement is the largest single class's contribution, computed with dnd5e's own
  * `computeProgression` so half- and third-caster divisors, `roundUp`, and any progression a module has
  * registered all stay the system's business rather than being reimplemented here. Each class is costed
- * as `count: 1` (single-classed), which is what makes a half caster round *up* - correct for gestalt,
- * where each side of the build is effectively its own single-classed character.
+ * as `count: 1` (single-classed), which is correct for gestalt: each side of the build is effectively
+ * its own single-classed character. Checked against the live config, that only changes the answer for
+ * the `third` progression (Eldritch Knight, Arcane Trickster), whose `roundUp` is false, so a lone third
+ * caster rounds up as dnd5e's own single-class rule requires - an Eldritch Knight 4 is caster level 2,
+ * not 1. `half` and `artificer` already carry `roundUp: true` and `full` has divisor 1, so for those the
+ * count makes no difference either way.
  *
  * Runs before dnd5e turns the progression into slots, so every later consumer (the slot maxima, the
  * spellcasting tab's "spellcaster level", scaling cantrips that read it) sees the corrected number.
