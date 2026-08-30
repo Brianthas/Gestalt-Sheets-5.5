@@ -117,8 +117,24 @@ Ranger 48, Sorcerer 141, Warlock 72, Wizard 219, plus eight subclass lists. dnd5
 it, against 659 spells unfiltered.
 
 `browseClassSpells` calls `dnd5e.applications.CompendiumBrowser.select()` with that filter locked.
-The browser is the system's; the only addition is the filter. Results come back as compendium
-documents, so `_preCreate` attributes them on creation.
+The browser is the system's; the only addition is the filter.
+
+Three things that each fail silently if missed:
+
+- **`selection: { min: 1 }` is required.** dnd5e gates selection mode on
+  `!!options.selection.min || !!options.selection.max` (dnd5e.mjs:32759) and both default to null.
+  Without it the browser opens read-only, nothing can be ticked, and `select()` resolves null.
+- **`select()` resolves a `Set`, or null.** A Set has no `length` and no `map`, so guarding on
+  `results?.length` discards every selection without erroring.
+- **The class is written explicitly on creation**, `system.sourceItem = spellList`, rather than left
+  to dnd5e's inference. The player pressed the button for that class, so the class is already known.
+  Inference would fail here anyway: the filter matches on `system.identifier`, which both spell
+  compendia share, so every spell appears once per pack (119 from `dnd5e.spells`, 124 from
+  `dnd5e.spells24` for Druid) and only the 2024 copies are in the registered spell lists. Picking the
+  2014 copy of Aid leaves `spellLists.forSpell()` with nothing to find.
+
+`toObject()` also drops `_stats.compendiumSource`; it is restored so the spell stays linked to where
+it came from, as a drag-drop would.
 
 `filters.locked.additional` is keyed by filter name, not a list of raw filter descriptors - the
 browser reads `filters.locked.additional[key]` per registered filter (dnd5e.mjs:33040). The payload
@@ -177,6 +193,7 @@ results are in `actor._source.items` until persisted.
 
 Both spell packs are enabled in a default world, so a class filter returns each spell twice (Wizard's
 219 identifiers fetch 426 rows). That is pre-existing and visible in dnd5e's own browser.
+
 ## Tidy 5e Sheet
 
 Checked against tidy5e-sheet 13.9.3, both its sheets.

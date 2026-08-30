@@ -657,8 +657,13 @@ function tallySpells(actor) {
   const rows = [];
   const counts = {};
   for (const [identifier, cls] of Object.entries(actor.spellcastingClasses ?? {})) {
+    const targets = spellTargetsForClass(cls);
+    // A class that publishes neither count has nothing to report against, so it gets no row rather
+    // than an empty one. This is also what keeps the panel quiet on content that does not carry
+    // these progressions at all, such as dnd5e 4.x, where the fields this reads do not exist.
+    if ((targets.prepared === null) && (targets.cantrips === null)) continue;
     counts[identifier] = { cantrips: 0, prepared: 0 };
-    rows.push({ identifier, name: cls.name, level: cls.system.levels, ...spellTargetsForClass(cls) });
+    rows.push({ identifier, name: cls.name, level: cls.system.levels, ...targets });
   }
   if (!rows.length) return { rows, unassigned: [], uncastable: [], granted: 0 };
 
@@ -839,7 +844,12 @@ async function browseClassSpells(actor, spellList) {
   // `locked.additional` is keyed by filter name, not a list of raw filter descriptors - the browser
   // reads `filters.locked.additional[key]` per registered filter. `spelllist` is dnd5e's own filter
   // for this, so its own `createFilter` turns the value into the identifier match.
+  // `selection` is what puts the browser in selection mode at all: dnd5e gates that on
+  // `!!options.selection.min || !!options.selection.max`, and both default to null. Without it the
+  // browser opens read-only, nothing can be picked, and the call resolves null every time.
+  // `max: null` leaves it unlimited, so several spells can be added in one visit.
   const results = await browser.select({
+    selection: { min: 1, max: null },
     filters: {
       locked: {
         documentClass: "Item",
@@ -848,10 +858,27 @@ async function browseClassSpells(actor, spellList) {
       }
     }
   });
-  if (!results?.length) return;
+  // `CompendiumBrowser.select` resolves with a Set of UUIDs, or null when cancelled. A Set has no
+  // `length` and no `map`, so testing `results?.length` here silently discards every selection.
+  const uuids = Array.from(results ?? []);
+  if (!uuids.length) return;
 
-  const docs = await Promise.all(results.map(uuid => fromUuid(uuid)));
-  const data = docs.filter(Boolean).map(doc => doc.toObject());
+  const docs = await Promise.all(uuids.map(uuid => fromUuid(uuid)));
+  const data = docs.filter(doc => doc?.type === "spell").map(doc => {
+    const obj = doc.toObject();
+
+    // The class is known: the player pressed "Browse <class> spells". Setting it directly beats
+    // leaving dnd5e to infer it, and `_preCreate` honours an already-set value. Inference would fail
+    // here anyway on a world with both spell compendia enabled: the filter matches on identifier, so
+    // every spell appears once per pack, and only the 2024 copy is in the registered spell lists -
+    // picking the 2014 copy of Aid gives dnd5e nothing to look up, and the spell lands unattributed.
+    obj.system = Object.assign({}, obj.system, { sourceItem: spellList });
+
+    // `toObject()` also drops `_stats.compendiumSource`, which a drag-drop stamps. Restoring it keeps
+    // the spell linked to where it came from, the same as adding it by hand.
+    obj._stats = Object.assign({}, obj._stats, { compendiumSource: doc.uuid });
+    return obj;
+  });
   if (data.length) await actor.createEmbeddedDocuments("Item", data);
 }
 

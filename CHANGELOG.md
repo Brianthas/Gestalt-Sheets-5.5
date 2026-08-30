@@ -14,8 +14,9 @@ All notable changes to this module are documented here. Versions follow the modu
 - Spells granted by a subclass are excluded from the counts and reported as a total, since they are
   always prepared and do not count against the limit.
 - A **Browse** button per class row, opening dnd5e's own compendium browser filtered to that class's
-  spell list instead of every spell in the world. Spells added that way are attributed to the right
-  class automatically.
+  spell list instead of every spell in the world. Spells added that way are assigned to the class you
+  browsed, so they count straight away. That matters on a world with both spell compendia enabled,
+  where every spell appears twice and only the 2024 copy is in the registered spell lists.
 - A class picker for spells that sit on more than one of the character's class lists, which dnd5e
   leaves unattributed because it cannot know which class a Sorcerer/Wizard's Magic Missile belongs to.
   It writes the same Source Class field the spell's own Details tab edits. Spells on none of the
