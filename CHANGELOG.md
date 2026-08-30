@@ -3,6 +3,36 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [1.0.3] - 2026-08-30
+
+From a report that a class added second to a gestalt character only received the multiclassing
+proficiencies, not its own.
+
+### Fixed
+- **Tool proficiencies were never unlocked for a secondary class.** The unlock worked from a list of
+  trait types that covered saves, skills, weapons and armor but not tools. A secondary Bard got the
+  multiclass one-instrument choice instead of its own three; a secondary Druid or Monk got nothing at
+  all, since neither has a multiclass tool entry to fall back on. Affects Bard, Druid and Monk in both
+  the 2014 and 2024 class compendia.
+- **The multiclass proficiency entries kept applying on top of the unlocked full ones.** Harmless for
+  weapons and armor, where the multiclass grant is a subset of the full list dnd5e then skips as already
+  held, but skills and tools are *choices*: a secondary Bard, Rogue or Ranger was offered a spare skill
+  pick that a single-classed character of that class never gets.
+
+Both came from the same place, and the rule is now stated once instead of as a list of trait types: on
+a gestalt actor every class is treated as the actor's original class. A secondary class is offered
+exactly what a single-classed character of that class is offered, and never the multiclass version.
+Verified across every ordered pair of classes in both compendia at levels 1, 2, 3, 4, 9 and 20 - 3168
+checks - that a class's proficiency advancements as a gestalt secondary match its single-classed set
+exactly, and that non-gestalt characters still get standard multiclassing.
+
+Only proficiencies can be affected: dnd5e sets the original-class restriction on Trait advancements
+alone, never on hit points, item grants, scale values, subclass choices or ASIs.
+
+### Changed
+- A secondary Bard, Rogue or Ranger no longer gets the extra skill choice the leftover multiclass entry
+  was adding. Base Bard's 3 plus secondary Rogue's 4 is now 7, as the README has always described.
+
 ## [1.0.2] - 2026-08-29
 
 Both issues in this release came from one bug report about a level 1 Wizard/Druid with **Double Spell

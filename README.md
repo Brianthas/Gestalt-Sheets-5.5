@@ -6,19 +6,19 @@ For example, a Bard 5 / Paladin 5 gestalt character has the features of a level 
 
 **Gestalt replaces dnd5e's standard multiclassing rules for that character - it isn't layered on top of
 them.** With Enable Gestalt checked, every class on the sheet is treated under gestalt rules (proficiency
-bonus/tier/HP from the best class, full saves/skills/weapon/armor proficiencies from every class, ASI
+bonus/tier/HP from the best class, full saves/skills/tool/weapon/armor proficiencies from every class, ASI
 overlap checking, etc.), not standard multiclass rules (summed effective level, one class's worth of
 saves, diluted proficiencies). Don't expect a character to be "gestalt for two of its classes and normal
 multiclass for a third" - if Enable Gestalt is on, none of that character's classes use standard
 multiclassing math anymore.
 
 **Built and tested around exactly two classes.** Everything here assumes a base class plus one secondary
-class. Adding a third (or more) is likely to get buggy - the ASI overlap check and the saves/skills/
-weapon/armor unlock only ever compare a class against the *base* class specifically, not against other
-secondary classes, so with three or more classes the module has no way to notice that two secondaries
-are stepping on each other (e.g. two secondary classes both granting overlapping "bonus" ASIs, or saving
-throw proficiencies unioning across three classes' worth of grants instead of two). Two classes is the
-supported shape; more than that isn't something to rely on.
+class. Adding a third (or more) is likely to get buggy - the ASI overlap check only ever compares a class
+against the *base* class specifically, not against other secondary classes, so with three or more classes
+the module has no way to notice that two secondaries are stepping on each other (e.g. two secondary
+classes both granting overlapping "bonus" ASIs). Proficiencies scale fine to any number of classes, since
+each class is simply treated as the original class, but a third class's saves and skills union on top of
+the other two. Two classes is the supported shape; more than that isn't something to rely on.
 
 ## Installation
 
@@ -161,17 +161,18 @@ actor - every class's ASIs apply normally, doubled up, with no warnings. This is
 than a per-actor one: whether ASI overlap gets checked at all is a table-wide house rule call for the GM
 to make, not something that should vary character to character within the same game.
 
-### Saving Throws, Skill, Weapon & Armor Proficiencies
+### Saving Throws, Skill, Tool, Weapon & Armor Proficiencies
 
 Unlike ASIs, dnd5e normally *restricts* these rather than doubling them up: saving throw proficiencies,
-most classes' skill choices, and the *full* weapon/armor proficiency list only come from the actor's
-"original class" (`system.details.originalClass` - the same **Original Class** field used above as the
-gestalt base class). A second class contributes nothing to saves, usually nothing to skills, and only a
-reduced weapon/armor list. That's correct for normal 5e multiclassing, but wrong for gestalt, where the
-intent is: compare what each class would grant, and end up with the better one whenever they overlap.
+most classes' skill and tool choices, and the *full* weapon/armor proficiency list only come from the
+actor's "original class" (`system.details.originalClass` - the same **Original Class** field used above
+as the gestalt base class). A second class contributes nothing to saves, and only a reduced multiclass
+grant for the rest. That's correct for normal 5e multiclassing, but wrong for gestalt, where the intent
+is: compare what each class would grant, and end up with the better one whenever they overlap.
 
-For gestalt actors, all of these are unlocked so every class's proficiency-granting advancement applies,
-not just the original class's:
+For gestalt actors, every class is treated as the original class, so each one is offered exactly the
+proficiencies it offers a single-classed character of that class, and never the reduced multiclass
+version:
 
 - **Saves**: each class grants its own 2 saving throw proficiencies, unioned together - e.g. Fighter
   (base, Strength/Constitution) + Sorcerer (secondary, Constitution/Charisma) ends up proficient in
@@ -180,6 +181,9 @@ not just the original class's:
   together - e.g. Sorcerer (base, minimal - simple weapons only) + Fighter (secondary) ends up with
   Fighter's full simple/martial weapons and light/medium/heavy armor and shields, not just Fighter's
   reduced secondary-class grant.
+- **Tools**: each class grants its own full tool choice - e.g. a secondary Bard picks three musical
+  instruments rather than the multiclass one, and a secondary Druid or Monk gets its tool grant at all
+  (those two have no multiclass tool entry, so before this they got none).
 - **Skills**: **you get skill choices from both classes' full lists, uncapped** - e.g. base Bard's 3 and
   secondary Rogue's 4 both apply, for 7 total, not "the better one" or "the base plus the difference."
   An earlier version tried to cap a secondary class's skill count to only the amount beyond what the
@@ -192,6 +196,9 @@ None of this needs a "which is higher" comparison for saves/weapons/armor: they'
 proficiencies (light armor, martial weapons, etc.), so granting each class's full list and letting dnd5e's
 own advancement logic skip anything already held naturally produces "the union," which is the same thing
 as "whichever class's grant is better" whenever one grant is a superset of the other (the normal case).
+
+Only proficiencies are affected. dnd5e sets the original-class restriction on Trait advancements alone,
+never on hit points, item grants, scale values, subclass choices or ASIs.
 
 **Note for existing characters**: this only affects advancement steps as they're offered going forward.
 If a secondary class already leveled past 1 *before* gestalt was turned on, its saves/skills step was

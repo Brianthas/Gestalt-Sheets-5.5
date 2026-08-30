@@ -106,8 +106,8 @@ Hooks.once("init", () => {
   }, "WRAPPER");
 
   registerLibWrapper("dnd5e.documents.advancement.Advancement.prototype.appliesToClass", function(wrapped) {
-    if (isProficiencyUnlockAdvancement(this) && isGestaltActor(this.actor)) return true;
-    return wrapped();
+    if (!isGestaltActor(this.actor)) return wrapped();
+    return appliesToGestaltClass(this);
   }, "MIXED");
 
   // Leveled spell slots (system.spells.spell1-9) are computed inside Actor5e#prepareData, *after* the
@@ -201,30 +201,39 @@ function getBaseClass(actor) {
 }
 
 /**
- * dnd5e restricts certain class-granted proficiencies (saving throws, most classes' skill choices, and
- * the *full* weapon/armor proficiency list) to only the actor's "original class"
- * (`system.details.originalClass`, auto-assigned to whichever class was added to the sheet first) via
- * `classRestriction: "primary"` on the relevant advancement. A second/"secondary" class instead only
- * gets whatever separate `classRestriction: "secondary"` entry that class defines (nothing, for saves;
- * usually nothing, for skills; a reduced list, for weapon/armor) - matching normal 5e multiclassing.
+ * Whether an advancement applies to its class on a gestalt actor: every class is treated as the actor's
+ * original class.
  *
- * Gestalt wants every class's full proficiencies available, not just the accidental first-added one's:
- * unlocking every "primary"-restricted entry for skills/saves/weapon/armor means each class applies its
- * full list regardless of original-class status. Where a class also has its own separate "secondary"
- * entry (weapon/armor), that one keeps applying too, but it's just a subset of the now-also-applying
- * full grant, so the practical result is the full list either way. dnd5e's own advancement-application
- * logic already skips re-granting anything the actor already has, so overlapping proficiencies between
- * classes don't need separate dedup code. Skills are included here uncapped, deliberately: every class
- * offers its own full skill list, so a gestalt character picks skills from *both* classes rather than
- * being limited to whichever class is more generous (see the README for why an earlier capped version
- * of this was dropped).
+ * dnd5e splits class-granted proficiencies in two with `classRestriction`. A `"primary"` entry is the
+ * class's full single-class grant and applies only to `system.details.originalClass`; a `"secondary"`
+ * entry is the reduced multiclass grant and applies only to classes that are *not* the original class.
+ * An entry with no restriction always applies. Since gestalt replaces multiclassing rather than layering
+ * on it, a second class should be offered exactly what it offers a single-classed character: its primary
+ * entry, and not the multiclass one. That is what `Advancement#appliesToClass` already computes for the
+ * original class, so this returns the same three answers for every class.
+ *
+ * This replaced an allowlist of trait keys (`skills`, `saves`, `weapon`, `armor`) that unlocked primary
+ * entries but left the secondary ones applying on top. It missed `tool` outright, so a secondary Bard,
+ * Druid or Monk lost its Tool Proficiencies entirely (Bard fell back to the one-instrument multiclass
+ * entry; Druid and Monk have no secondary tool entry, so they got nothing), and the surviving secondary
+ * entries added a spare skill choice no single-classed character gets.
+ *
+ * Two facts checked against the shipped compendia (classes, classes24, subclasses, classfeatures; 730
+ * advancements) make treating every class as the original class safe rather than broad. `classRestriction`
+ * is set on `Trait` advancements only - never on HitPoints, ItemGrant, ScaleValue, Subclass or ASI - so
+ * nothing outside proficiencies changes. And all 18 `secondary` entries have a primary or unrestricted
+ * entry for the same trait key on the same class, so suppressing them removes only a grant that is
+ * already covered by a fuller one.
+ *
+ * dnd5e's own advancement-application logic skips re-granting anything the actor already has, so
+ * proficiencies both classes grant need no dedup here. Skill choices stay uncapped across the two
+ * classes, each class contributing its own full list (see the README for why an earlier capped version
+ * was dropped).
  * @param {object} advancement
  * @returns {boolean}
  */
-function isProficiencyUnlockAdvancement(advancement) {
-  if (advancement.type !== "Trait") return false;
-  const traits = advancement.representedTraits();
-  return ["skills", "saves", "weapon", "armor"].some(t => traits.has(t));
+function appliesToGestaltClass(advancement) {
+  return advancement.classRestriction !== "secondary";
 }
 
 /**
