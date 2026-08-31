@@ -60,10 +60,12 @@ reconstructed for the tooltip only:
 
 | Condition | Tooltip |
 | --- | --- |
-| expertise mode, value 2 | Already expertise |
-| expertise mode, value below 1 | Expertise needs proficiency first |
-| default mode, value 1 or more | Already proficient |
-| not in the advancement's pool | Not in this class's list |
+| expertise mode, value 0 | Expertise needs proficiency in the skill first |
+| already at or above what the mode would set | Already expertise, or already proficient |
+| not among the step's skill options | Not one of this step's options |
+
+The wording avoids naming a class: the same step shape belongs to backgrounds and species too, and
+saying "this class cannot grant it" on the Acolyte background was simply wrong.
 
 Once every pick in the step is spent dnd5e drops the picker entirely, so the offer set is empty and
 every row is greyed. Those rows get no tooltip: saying each remaining skill is "unavailable" would read
@@ -72,11 +74,39 @@ few minutes of testing and it produced "Not available in this step" against fift
 merely not needed.
 
 The pool comes from `configuration.choices[].pool`, where `skills:*` means all eighteen. Rogue's is a
-ten-skill list, which is what makes "not in this class's list" a distinct and common case on a gestalt
-character.
+ten-skill list, which is what makes "not one of this step's options" a distinct and common case on a
+gestalt character.
 
 `configuration.type` does not exist on this advancement in 5.3.3; the trait family lives in the key
-prefixes, so `isSkillTraitAdvancement` tests that every grant and pool key starts with `skills`.
+prefixes, so `isSkillTraitAdvancement` tests whether **any** grant or pool key starts with `skills:`.
+
+## Which shapes exist
+
+Surveying all 191 Trait advancements across `classes24`, `classes`, `subclasses`, `origins24`,
+`backgrounds`, `races` and `feats24`:
+
+| Shape | Count |
+| --- | --- |
+| `default` mode, wildcard pool | 8 |
+| `default` mode, explicit pool (3 to 11 keys) | 30 |
+| `default` mode, grants only | 3 |
+| `expertise` mode, wildcard pool | 8 |
+| `expertise` mode, explicit pool | 1 |
+| mixed with a non-skill key | 7 |
+
+Only `default` and `expertise` appear on skills. `skillGrantValue` still covers `forcedExpertise`,
+`upgrade` and `mastery` because a homebrew class can use them, and their semantics differ: expertise
+refuses a skill at 0, forcedExpertise does not, and upgrade sets 1 from 0 and 2 otherwise.
+
+The seven mixed ones are the reason the check is `some` and not `every`: the 2014 Rogue's Expertise
+(`tool:thief` with `skills:*`), the Skilled feat (`skills:*` with `tool:*`), and the Background
+Proficiencies step of Acolyte, Criminal, Sage and Soldier. Requiring every key to be a skill hid the
+panel on every background a character will ever take. Non-skill options are ignored by the panel and
+remain in dnd5e's picker, which still lists them.
+
+Grants-only steps keep the panel. High Elf's Keen Senses grants Perception with nothing to choose, and
+seeing that it duplicates a proficiency the other class already gave is the kind of overlap this is
+for.
 
 ## Testing notes
 
@@ -88,3 +118,17 @@ its `button[data-action="yes"]` is clicked.
 
 A full Bard 1 then Rogue 1 gestalt run ends with `acr:2 dec:1 prc:1 prf:1 per:1 slt:1 ste:2`, and the
 four states to look for are: no mark, `fa-circle-half-stroke`, `fa-check`, `fa-check-double`.
+
+`item.toObject()` on an **owned** class carries that item's applied advancement values, so a probe
+built from a character's existing class arrives with its choices already made and offers nothing.
+Clear each `advancement[].value` when copying one, or the step under test is a no-op.
+
+The list is capped at `19rem`. The eighteen-skill list measures 242px in the 460px window, so it does
+not scroll; forcing the cap to `6rem` in the page makes `scrollHeight` 242 against a 96px client and
+the element scrolls, which is what proves the cap is a bound rather than a clip.
+
+What a full pass covers: every class in both packs (57 and 52 Trait steps, 13 and 13 with skill keys,
+one panel each and none on the rest); the four mixed backgrounds; the two grants-only species; the
+Skilled feat; a Plutonium-imported class with a six-key explicit pool; picking and removing through
+the panel; `forLevelChange` reaching Rogue's level 6 Expertise; the non-gestalt and module-off gates;
+and two extra renders producing one panel rather than three.

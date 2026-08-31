@@ -99,7 +99,7 @@ classes' worth of skills leaves no way to see the overlap while deciding. Bard a
 hand out eight proficiencies and four expertises.
 
 A row you cannot pick is greyed, with a tooltip saying why: already proficient, already expertise,
-expertise needs proficiency first, or not in this class's list. The gate is dnd5e's own - it removes
+expertise needs proficiency first, or not one of the step's options. The gate is dnd5e's own - it removes
 what the character has from its picker, and clicking a row drives that same picker - so no choice here
 bypasses the system's rules. Picks made earlier in the same level-up show up immediately.
 

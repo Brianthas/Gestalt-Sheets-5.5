@@ -3,6 +3,23 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [1.3.1] - 2026-08-30
+
+### Fixed
+- The skill overview appeared on no step that mixes skills with another trait type. A survey of the
+  191 Trait advancements in dnd5e's packs found seven: the 2014 Rogue's Expertise
+  (`tool:thief` with `skills:*`), the Skilled feat, and every 2024 background's Background
+  Proficiencies, which is a step every character takes. The check required every key in the step to
+  be a skill; one skill key is now enough, and the non-skill options stay with dnd5e's own picker.
+- Blocked-row tooltips said "this class" on steps belonging to a background or species, and named a
+  restriction on skills that were simply outside the step's list. Both now read neutrally.
+- The reason shown for a blocked row is now derived from what the step's trait mode would actually
+  set a skill to, matching `TraitAdvancement#apply`. Only `default` and `expertise` appear on skills
+  in dnd5e's own content, but `forcedExpertise` and `upgrade` are handled for homebrew.
+- The list capped its height a couple of pixels below the eighteen-skill list, so it showed a
+  scrollbar that scrolled almost nothing. The cap now clears the full list and still bounds a longer
+  one.
+
 ## [1.3.0] - 2026-08-30
 
 ### Added

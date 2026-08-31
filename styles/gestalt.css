@@ -171,7 +171,10 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1px 8px;
-  max-height: 15rem;
+  /* Nine rows of two columns is the whole 18-skill list at about 242px, so this clears it without a
+     scrollbar. The cap stays so a system with more skills, or a larger font, scrolls rather than
+     pushing the window's buttons off the bottom. */
+  max-height: 19rem;
   overflow-y: auto;
   min-height: 0;
 }

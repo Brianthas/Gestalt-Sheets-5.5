@@ -1044,10 +1044,16 @@ const SKILL_STATES = {
 };
 
 /**
- * Whether a Trait advancement is choosing skills, from the keys it actually offers.
+ * Whether a Trait advancement touches skills at all, from the keys it offers.
  *
  * `configuration.type` does not exist on this advancement in dnd5e 5.3.3 - the trait family is
- * carried in the key prefixes instead, so a pool of `skills:*` or `skills:acr` is what identifies it.
+ * carried in the key prefixes instead, so `skills:*` or `skills:acr` is what identifies one.
+ *
+ * Any skill key is enough, not all of them. A survey of the 191 Trait advancements in dnd5e's packs
+ * found seven that mix skills with tools in a single step: the 2014 Rogue's Expertise
+ * (`tool:thief` and `skills:*`), the Skilled feat, and every 2024 background's Background
+ * Proficiencies. Requiring every key to be a skill excluded all of them, which is every background
+ * a character will ever take.
  * @param {Advancement} advancement
  * @returns {boolean}
  */
@@ -1056,11 +1062,13 @@ function isSkillTraitAdvancement(advancement) {
     ...(advancement.configuration?.grants ?? []),
     ...(advancement.configuration?.choices ?? []).flatMap(c => Array.from(c.pool ?? []))
   ];
-  return (keys.length > 0) && keys.every(key => key.startsWith("skills"));
+  return keys.some(key => key.startsWith("skills:"));
 }
 
 /**
- * Every skill this advancement could offer, as skill keys. `skills:*` means all of them.
+ * Every skill this advancement could offer, as skill keys. `skills:*` means all of them, and any
+ * non-skill key in a mixed pool is ignored - the tools in a background's step stay with dnd5e's own
+ * picker, which still lists them.
  * @param {Advancement} advancement
  * @returns {Set<string>}
  */
@@ -1069,11 +1077,33 @@ function skillPoolFor(advancement) {
   for (const choice of advancement.configuration?.choices ?? []) {
     for (const key of choice.pool ?? []) {
       if (key === "skills:*") return new Set(Object.keys(CONFIG.DND5E.skills));
-      const [, skill] = key.split(":");
-      if (skill) pool.add(skill);
+      if (!key.startsWith("skills:")) continue;
+      pool.add(key.slice("skills:".length));
     }
   }
   return pool;
+}
+
+/**
+ * The proficiency multiplier this advancement would set a skill to, or null when the mode cannot
+ * apply to a skill at its current value.
+ *
+ * Mirrors what `TraitAdvancement#apply` writes (`dnd5e.mjs:9793`): default sets 1, expertise sets 2
+ * but refuses a skill at 0, forcedExpertise sets 2 regardless, and upgrade sets 1 from 0 and 2
+ * otherwise. Only default and expertise appear on skills in dnd5e's own content; the others are
+ * handled because a homebrew class can use them.
+ * @param {string} mode
+ * @param {number} value
+ * @returns {number|null}
+ */
+function skillGrantValue(mode, value) {
+  switch (mode) {
+    case "expertise": return value === 0 ? null : 2;
+    case "forcedExpertise": return 2;
+    case "upgrade": return value === 0 ? 1 : 2;
+    case "mastery": return null;
+    default: return 1;
+  }
 }
 
 /**
@@ -1093,16 +1123,22 @@ function skillPoolFor(advancement) {
  */
 function skillBlockedReason({ offered, inPool, value, mode, complete }) {
   if (offered) return null;
-  if (mode === "expertise") {
-    if (value >= 2) return game.i18n.localize("GESTALT.Skills.Blocked.AlreadyExpertise");
-    if (complete) return null;
-    if (value < 1) return game.i18n.localize("GESTALT.Skills.Blocked.NeedsProficiency");
-  } else {
-    if (value >= 1) return game.i18n.localize("GESTALT.Skills.Blocked.AlreadyProficient");
-    // Once every pick is spent dnd5e offers nothing, and saying each remaining skill is "unavailable"
-    // would read as a restriction rather than as the step simply being finished.
-    if (complete) return null;
+
+  // Expertise is the one mode that refuses a skill outright rather than having nothing left to add.
+  if ((mode === "expertise") && (value === 0)) {
+    return complete ? null : game.i18n.localize("GESTALT.Skills.Blocked.NeedsProficiency");
   }
+
+  const grant = skillGrantValue(mode, value);
+  if ((grant !== null) && (value >= grant)) {
+    return game.i18n.localize(value >= 2
+      ? "GESTALT.Skills.Blocked.AlreadyExpertise"
+      : "GESTALT.Skills.Blocked.AlreadyProficient");
+  }
+
+  // Once every pick is spent dnd5e offers nothing, and saying each remaining skill is "unavailable"
+  // would read as a restriction rather than as the step simply being finished.
+  if (complete) return null;
   if (!inPool) return game.i18n.localize("GESTALT.Skills.Blocked.NotOffered");
   return game.i18n.localize("GESTALT.Skills.Blocked.Unavailable");
 }
