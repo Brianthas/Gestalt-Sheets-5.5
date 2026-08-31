@@ -31,7 +31,19 @@ Ranger       2 / 6 / 10 / 15               -
 
 Wizard reaches 25 prepared at level 20 where every other full caster stops at 22, and Paladin and
 Ranger have no cantrip entry at all. Both are reasons the numbers are read rather than tabulated
-here. A class publishing no value for a count shows no row for it.
+here.
+
+The ScaleValue advancement is the only place a class records these numbers. dnd5e's class
+spellcasting schema (`dnd5e.mjs:10695`) holds `progression`, `ability` and `preparation.formula` and
+nothing else, so there is no second field to fall back on when the advancement is absent. The
+advancement's key is `configuration.identifier` or, when that is blank as it is in the official
+compendium classes, the slugified title, so "Cantrips Known" keys as `cantrips-known` either way.
+
+A class that publishes no target still shows its tally, without a denominator and with a tooltip
+naming the missing scale value, whenever the count is above zero. Plutonium's class importer writes
+Max Prepared Spells but not Cantrips Known, and hiding the group made that look like the module was
+not counting cantrips at all. The above-zero condition is what keeps Paladin and Ranger quiet: they
+publish no cantrip target because they have no cantrips, so there is never a count to show.
 
 The 2024 Wizard exposes no spellbook size, so the panel has no spellbook row.
 

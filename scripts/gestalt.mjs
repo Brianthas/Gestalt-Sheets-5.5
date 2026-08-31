@@ -748,12 +748,23 @@ function buildSpellCountPanel(tally) {
     cell(line, `${row.name} ${row.level}`, "gestalt-spell-class");
 
     for (const [key, labelKey] of [["cantrips", "Cantrips"], ["prepared", "Prepared"]]) {
-      if (row[key] === null) continue;
+      const target = row[key];
+      const has = row.has[key];
+      // A class that publishes no target still shows its tally, with no denominator, whenever there
+      // is something to show. Skipping the group outright made a class item missing the advancement
+      // look like the module was not counting at all: Plutonium's class importer writes
+      // Max Prepared Spells but no Cantrips Known, so a Sorcerer imported that way lost its cantrip
+      // line entirely. The `has` check is what keeps Paladin and Ranger quiet - they publish no
+      // cantrip target because they have no cantrips, and a row reading "cantrips 0" is noise.
+      if ((target === null) && !has) continue;
       const group = document.createElement("span");
       group.classList.add("gestalt-spell-count");
       cell(group, game.i18n.localize(`GESTALT.SpellCounts.${labelKey}`), "gestalt-spell-label");
-      const value = cell(group, `${row.has[key]} / ${row[key]}`, "gestalt-spell-value");
-      if (row.has[key] !== row[key]) value.classList.add("gestalt-spell-mismatch");
+      const value = cell(group, target === null ? `${has}` : `${has} / ${target}`, "gestalt-spell-value");
+      if (target === null) {
+        value.classList.add("gestalt-spell-untargeted");
+        group.dataset.tooltip = game.i18n.format(`GESTALT.SpellCounts.NoTarget${labelKey}`, { name: row.name });
+      } else if (has !== target) value.classList.add("gestalt-spell-mismatch");
       line.append(group);
     }
 

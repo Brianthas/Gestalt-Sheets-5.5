@@ -97,6 +97,10 @@ cantrips and prepared spells they should have against how many they do. Only a w
 coloured. Targets are read from each class's own progression, so they are whatever the class says
 rather than a table kept in this module.
 
+A class item that carries no limit for a count - some third-party importers write Max Prepared Spells
+but not Cantrips Known - gets the count with no denominator and a tooltip naming the scale value to
+add. Classes with no cantrips at all, Paladin and Ranger, show no cantrip line.
+
 **Prepared means actually prepared.** A spell sitting on the sheet unprepared is one the character
 knows, not one they have prepared, and it does not count.
 

@@ -80,6 +80,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* A count with no published limit is not wrong, so it is not red. The dotted underline marks it as
+   carrying a tooltip that says why the limit is missing. */
+.gestalt-spell-untargeted {
+  border-bottom: 1px dotted var(--color-text-secondary, #999);
+  cursor: help;
+}
+
 /* Only a wrong count is coloured, so the eye goes to the problem rather than to the panel. */
 .gestalt-spell-mismatch {
   color: var(--color-level-error, #ce0707);

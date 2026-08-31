@@ -14,6 +14,8 @@
   "GESTALT.SpellCounts.Title": "Gestalt Spell Counts",
   "GESTALT.SpellCounts.Cantrips": "cantrips",
   "GESTALT.SpellCounts.Prepared": "prepared",
+  "GESTALT.SpellCounts.NoTargetCantrips": "{name} publishes no Cantrips Known value, so this is a count with nothing to check it against. Add a Cantrips Known scale value to the class item to get a limit.",
+  "GESTALT.SpellCounts.NoTargetPrepared": "{name} publishes no Max Prepared Spells value, so this is a count with nothing to check it against. Add a Max Prepared Spells scale value to the class item to get a limit.",
   "GESTALT.SpellCounts.Browse": "Browse {name} spells",
   "GESTALT.SpellCounts.Unassigned": "{count} spell(s) are on more than one of this character's class lists. Pick which class each counts against:",
   "GESTALT.SpellCounts.Uncastable": "{count} spell(s) on none of this character's class spell lists: {names}.",
