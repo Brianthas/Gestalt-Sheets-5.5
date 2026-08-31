@@ -2,7 +2,7 @@
   "id": "gestalt-sheets-55",
   "title": "Gestalt D&D 5.5e",
   "description": "Adds Gestalt character support to the dnd5e system: play two classes at once, gain both classes' features, without your effective level, proficiency bonus, or spell slots scaling as if the levels were added together.",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "compatibility": {
     "minimum": "13",
     "verified": "14"

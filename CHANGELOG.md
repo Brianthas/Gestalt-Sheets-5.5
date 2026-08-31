@@ -3,6 +3,16 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [1.4.1] - 2026-08-31
+
+### Fixed
+- XP to the next level used the summed multiclass level instead of the gestalt one. A Bard 2 / Rogue 2
+  character needed 6500 XP, the level 4 threshold, where it should be 900, and the bar's lower bound
+  was 2700 instead of 300. dnd5e fills `details.xp` in the same `prepareBaseData` pass that sums the
+  class levels, before this module corrects the level, and unlike everything derived later in the
+  cycle it does not recompute itself. It is now recomputed alongside the proficiency bonus, mirroring
+  dnd5e's own block so the level 20 and epic boon cases behave the same as on any other character.
+
 ## [1.4.0] - 2026-08-31
 
 ### Added

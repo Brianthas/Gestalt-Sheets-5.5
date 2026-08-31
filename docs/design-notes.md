@@ -4,6 +4,26 @@ Why the module does things the way it does. The README covers what it does; this
 that used to sit inside it, kept for whoever maintains the code. See also
 [spell-counts.md](spell-counts.md) for the spell count panel specifically.
 
+## Character level, and what has to be recomputed with it
+
+`applyGestaltLevel` runs after dnd5e's `prepareBaseData` and overwrites `details.level` with the base
+class's own level. Anything dnd5e derives *later* in the prepare cycle picks the corrected value up on
+its own, which is why one override point covers tier, HP per level and cantrip scaling.
+
+Anything dnd5e computes **inside** `prepareBaseData`, after it sums the class levels, is already stale
+when this runs and has to be recomputed by hand. There are two, both at `dnd5e.mjs:72064-72081`:
+
+- `attributes.prof`
+- `details.xp` - `max`, `min`, `pct`, and `boonsEarned` in the epic boon case
+
+The XP one was missed until a bug report in August 2026: a Bard 2 / Rogue 2 character was asked for
+6500 XP, the level 4 threshold, instead of 900. The level and proficiency bonus on the same sheet were
+already correct, which is what made it look like a display bug rather than a stale derivation.
+
+If a future dnd5e version derives anything else from `details.level` within `prepareBaseData`, it will
+need adding here. Reading that function top to bottom is the check, not grepping for `details.level`,
+because the stale values are the ones computed from it rather than the ones that mention it.
+
 ## Hit points
 
 The level 1 correction is computed fresh on every data-prep cycle rather than read from what was

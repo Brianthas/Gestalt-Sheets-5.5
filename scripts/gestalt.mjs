@@ -246,9 +246,12 @@ function appliesToGestaltClass(advancement) {
 /**
  * Overwrite the actor's derived character level (and everything computed from it) to match
  * the gestalt base class's own level, instead of dnd5e's default sum of every class's levels.
- * Runs after dnd5e's own `prepareBaseData`, so this is the only override point needed: everything
- * dnd5e derives later in the prepare cycle (proficiency bonus, tier, HP-per-level, cantrip scaling,
- * and any other item's fallback to `system.details.level`) reads the corrected value from here on.
+ * Runs after dnd5e's own `prepareBaseData`, so anything dnd5e derives *later* in the prepare cycle
+ * (tier, HP-per-level, cantrip scaling, and any other item's fallback to `system.details.level`)
+ * reads the corrected value from here on.
+ *
+ * Values dnd5e computes inside `prepareBaseData` itself, after summing the levels, are already stale
+ * by the time this runs and have to be recomputed: proficiency bonus and the experience track.
  * @param {CharacterData} characterData
  */
 function applyGestaltLevel(characterData) {
@@ -260,6 +263,37 @@ function applyGestaltLevel(characterData) {
 
   characterData.details.level = baseClass.system.levels;
   characterData.attributes.prof = dnd5e.documents.Proficiency.calculateMod(characterData.details.level);
+  applyGestaltExperience(characterData);
+}
+
+/**
+ * Recompute the XP thresholds from the gestalt level.
+ *
+ * dnd5e fills `details.xp` in the same `prepareBaseData` pass that sums the class levels
+ * (`dnd5e.mjs:72068`), so a Bard 2 / Rogue 2 gestalt character got the track for level 4: 6500 XP to
+ * the next level instead of 900, and a `min` of 2700 instead of 300. The level is corrected above,
+ * but XP was computed before that and does not recompute itself.
+ *
+ * This mirrors dnd5e's own block rather than simplifying it, so the max-level and epic-boon cases
+ * behave identically to a non-gestalt character.
+ * @param {CharacterData} characterData
+ */
+function applyGestaltExperience(characterData) {
+  const actor = characterData.parent;
+  const { xp, level } = characterData.details;
+
+  xp.max = level >= CONFIG.DND5E.maxLevel ? Infinity : actor.getLevelExp(level || 1);
+  xp.min = level ? actor.getLevelExp(level - 1) : 0;
+
+  if (Number.isFinite(xp.max)) {
+    const required = xp.max - xp.min;
+    xp.pct = Math.clamp(Math.round((xp.value - xp.min) * 100 / required), 0, 100);
+  } else if (game.settings.get("dnd5e", "levelingMode") === "xpBoons") {
+    const overflow = xp.value - actor.getLevelExp(CONFIG.DND5E.maxLevel);
+    xp.boonsEarned = Math.max(0, Math.floor(overflow / CONFIG.DND5E.epicBoonInterval));
+    const progress = overflow - (CONFIG.DND5E.epicBoonInterval * xp.boonsEarned);
+    xp.pct = Math.clamp(Math.round((progress / CONFIG.DND5E.epicBoonInterval) * 100), 0, 100);
+  } else xp.pct = 100;
 }
 
 /**
