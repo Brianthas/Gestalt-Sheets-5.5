@@ -17,10 +17,12 @@ All notable changes to this module are documented here. Versions follow the modu
   tested here - it is matched by name against dnd5e's spell compendia, then handed to the same
   registry dnd5e uses.
 
-  An always-prepared spell prefers a subclass over a class, because that is what it is: Command sits
-  on the bard, cleric, paladin and draconic lists, so attributing it by class would credit a
-  Bard/Sorcerer's Draconic Sorcery grant to the Bard. Anything with more than one candidate is left
-  alone and named, since a wrong label is worse than none.
+  A spell is attributed to the class it traces back to, not the feature that handed it over, so a
+  Draconic Sorcery grant reads "Sorcerer". Which class that is gets worked out through the subclass
+  for an always-prepared spell, because the class lists alone are not enough: Command sits on the
+  bard, cleric and paladin lists as well as draconic, so a Bard/Sorcerer's Draconic Sorcery grant
+  would otherwise be credited to the Bard. Anything with more than one candidate is left alone and
+  named, since a wrong label is worse than none.
 
 ## [1.3.1] - 2026-08-30
 

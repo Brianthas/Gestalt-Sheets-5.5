@@ -1318,10 +1318,11 @@ async function spellUuidsByName() {
 /**
  * Work out what each unattributed spell should point at, without writing anything.
  *
- * A subclass is preferred over a class for an always-prepared spell, because that is what the spell
- * is: dnd5e records `subclass:draconic` on a Draconic Sorcery grant it applied itself. Preferring the
- * class instead gets it wrong - Command is on the bard, cleric, paladin and draconic lists, so a
- * Bard/Sorcerer would have their Draconic Sorcery grant attributed to Bard.
+ * Every spell is attributed to a class, never to the feature that handed it over: a Draconic Sorcery
+ * grant traces back to Sorcerer, and the sheet reads "Sorcerer". Which class is worked out through
+ * the subclass for an always-prepared spell, because the class lists alone get it wrong - Command is
+ * on the bard, cleric and paladin lists as well as draconic, so a Bard/Sorcerer's Draconic Sorcery
+ * grant would be credited to the Bard. The subclass identifies the class; it is not the answer.
  *
  * Anything with more than one candidate is left alone and reported. A wrong label is worse than none.
  * @param {Actor5e} actor
@@ -1353,10 +1354,22 @@ async function planSpellSourceRepairs(actor) {
         || (list.name?.toLowerCase() === sub.name.toLowerCase()))));
     const classHits = classes.filter(id => lists.some(list => (list.type === "class") && (list.identifier === id)));
 
+    // A subclass match identifies the class; it is not the answer itself. The spell traces back to
+    // the class that granted the subclass, so a Draconic Sorcery grant is attributed to Sorcerer and
+    // the sheet reads "Sorcerer", not "Draconic Sorcery". Finding it through the subclass is still
+    // what keeps it right: Command is on the bard list too, and attributing by class alone would
+    // credit a Bard/Sorcerer's Draconic Sorcery grant to the Bard.
     const always = spell.system.prepared === CONFIG.DND5E.spellPreparationStates.always.value;
+    const viaSubclass = (always && (subclassHits.length === 1))
+      ? subclassHits[0].system.classIdentifier
+      : null;
+
     let target = null;
-    if (always && (subclassHits.length === 1)) target = { item: subclassHits[0], key: `subclass:${subclassHits[0].system.identifier}` };
-    else if (classHits.length === 1) target = { item: actor.classes[classHits[0]], key: `class:${classHits[0]}` };
+    if (viaSubclass && actor.classes[viaSubclass]) {
+      target = { item: actor.classes[viaSubclass], key: `class:${viaSubclass}` };
+    } else if (classHits.length === 1) {
+      target = { item: actor.classes[classHits[0]], key: `class:${classHits[0]}` };
+    }
 
     if (!target) {
       const candidates = [...subclassHits.map(s => s.name), ...classHits.map(c => actor.classes[c]?.name ?? c)];

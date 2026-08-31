@@ -295,10 +295,17 @@ It re-runs `SpellData#_preCreate` (`dnd5e.mjs:22631`) with two additions.
 none, so the name is used as a fallback key into `dnd5e.spells24` and `dnd5e.spells`, and the resulting
 UUID goes to the same `dnd5e.registry.spellLists.forSpell` registry.
 
-**Preferring a subclass for an always-prepared spell.** Attributing by class is wrong for grants:
-Command is on the bard, cleric, paladin and draconic lists, so a Bard/Sorcerer's Draconic Sorcery grant
-would be credited to the Bard. `forSpell` returns `metadata.type` of `class` or `subclass`, so the two
-are separated and a `prepared === 2` spell takes the subclass match.
+**Finding the class through the subclass, for an always-prepared spell.** The class lists alone get
+grants wrong: Command is on the bard, cleric and paladin lists as well as draconic, so a
+Bard/Sorcerer's Draconic Sorcery grant would be credited to the Bard. `forSpell` returns
+`metadata.type` of `class` or `subclass`, so the two are separated and a `prepared === 2` spell is
+resolved by its subclass match.
+
+The subclass identifies the class; it is not what gets written. The spell traces back to the class
+that granted the subclass, so `subclassItem.system.classIdentifier` is used and the field holds
+`class:sorcerer`, making the sheet read "Sorcerer" rather than "Draconic Sorcery". dnd5e's own
+advancement writes `subclass:draconic` here instead - this deliberately differs, because the class is
+the useful answer on a gestalt character deciding which of two classes a spell belongs to.
 
 Matching a subclass list to the actor's subclass item cannot rely on the identifier alone. The
 registered list is `draconic`, while the imported subclass item identifies itself `draconic-sorcery`.
@@ -310,10 +317,23 @@ and it is not visible afterwards without reading the field.
 
 ### Checked
 
-On a copy of the imported Bard/Sorcerer, all four unattributed spells resolved to Draconic Sorcery,
-including Command, and the base sheet then rendered `Draconic Sorcery • V, S, M`. Tidy's sheet shows
-the same, because it is the same field. The QA actor's Animal Friendship, on no list its classes use,
-was left alone with a notification rather than guessed at.
+On a copy of the imported Bard/Sorcerer, driving the real button, all four unattributed spells were
+written `class:sorcerer` - Command included, which is the one the class lists alone would have called
+Bard - and the base sheet then rendered:
+
+```
+Chromatic Orb    Sorcerer • V, S, M
+Command          Sorcerer • V
+Alter Self       Sorcerer • V, S
+Dragon's Breath  Sorcerer • V, S, M
+```
+
+Tidy's sheet reads the same field. The QA actor's Animal Friendship, on no list its classes use, was
+left alone with a notification rather than guessed at.
+
+The spell count panel is unaffected: `isGrantedSpell` keys on `level > 0 && prepared === 2` and never
+reads `sourceItem`, and the panel still reported "4 always-prepared spell(s) granted by a subclass,
+not counted" after the write.
 
 The button is gated on `isGestaltActor` and ownership. It deliberately ignores the sheet's play/edit
 lock that greys the checkboxes beside it: that lock guards against a stray click changing a stat, and

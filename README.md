@@ -114,9 +114,10 @@ neither that field nor an advancement origin, so it shows its components with no
 from dnd5e's own spell lists and writes that one field. It lists every change and asks before writing.
 It is a one-off per character, which is why it lives there rather than on the Spells tab.
 
-An always-prepared spell is attributed to a subclass in preference to a class, matching what dnd5e
-records for a grant it applied itself. A spell with more than one possible source is left alone and
-named in the dialog.
+A spell is attributed to the class it traces back to, not the feature that granted it, so a Draconic
+Sorcery spell reads "Sorcerer". For an always-prepared spell the subclass is what identifies that
+class, because the class spell lists alone are ambiguous. A spell with more than one possible source
+is left alone and named in the dialog.
 
 ### Spell counts
 
