@@ -39,11 +39,24 @@ nothing else, so there is no second field to fall back on when the advancement i
 advancement's key is `configuration.identifier` or, when that is blank as it is in the official
 compendium classes, the slugified title, so "Cantrips Known" keys as `cantrips-known` either way.
 
-A class that publishes no target still shows its tally, without a denominator and with a tooltip
-naming the missing scale value, whenever the count is above zero. Plutonium's class importer writes
-Max Prepared Spells but not Cantrips Known, and hiding the group made that look like the module was
-not counting cantrips at all. The above-zero condition is what keeps Paladin and Ranger quiet: they
-publish no cantrip target because they have no cantrips, so there is never a count to show.
+A class item does not have to carry these advancements. Plutonium's importer writes Max Prepared
+Spells but not Cantrips Known, so a Sorcerer imported that way publishes no cantrip limit. Any limit
+the class item does not publish is read from the official class of the same `system.identifier` in
+`dnd5e.classes24`, at that class's level, and marked in the panel as borrowed.
+
+`loadOfficialClassTargets` fetches those twelve classes once at `ready` and caches the ScaleValue
+advancements themselves, so the level lookup is `advancement.valueForLevel(level)` rather than a scale
+walk written here. The index cannot serve this - advancements are not index fields - and the fetch is
+asynchronous, so the `ready` hook re-renders any open sheet once the cache is filled.
+
+Where neither the class item nor the official class publishes a limit, the count shows with no
+denominator, and only when it is above zero. That is the homebrew case. It is also what keeps Paladin
+and Ranger quiet: dnd5e's own Paladin has no cantrip limit to borrow, and a Paladin has no cantrips to
+count.
+
+1.2.2 got this wrong by applying the above-zero condition to every missing limit, including ones that
+could have been borrowed. A Plutonium Sorcerer 3 with no cantrips chosen then showed no cantrip line
+while being four short - the same symptom the panel exists to catch.
 
 The 2024 Wizard exposes no spellbook size, so the panel has no spellbook row.
 

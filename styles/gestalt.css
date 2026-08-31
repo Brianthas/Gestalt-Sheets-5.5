@@ -80,6 +80,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* A limit borrowed from the compendium class is still a limit, so it keeps its red when the count is
+   wrong. The dotted underline says the number is not this class item's own. */
+.gestalt-spell-inferred {
+  border-bottom: 1px dotted var(--color-text-secondary, #999);
+  cursor: help;
+}
+
 /* A count with no published limit is not wrong, so it is not red. The dotted underline marks it as
    carrying a tooltip that says why the limit is missing. */
 .gestalt-spell-untargeted {

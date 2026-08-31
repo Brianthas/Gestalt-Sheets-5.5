@@ -3,6 +3,18 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [1.2.3] - 2026-08-30
+
+### Fixed
+- A missing limit is now filled from dnd5e's own class compendium instead of leaving the count
+  unbounded. 1.2.2 showed such a count without a denominator, but only when it was above zero, which
+  left the worst case silent: a Sorcerer 3 imported by Plutonium, with no Cantrips Known advancement
+  and no cantrips picked, still showed no cantrip line at all while being four short. The panel now
+  reads the official class of the same identifier for any limit the class item does not publish, and
+  marks the borrowed number with a dotted underline and a tooltip saying where it came from.
+  Paladin and Ranger stay quiet: dnd5e's own Paladin has no cantrip limit either, so there is nothing
+  to borrow and nothing counted.
+
 ## [1.2.2] - 2026-08-30
 
 ### Fixed

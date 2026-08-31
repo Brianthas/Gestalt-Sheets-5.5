@@ -478,6 +478,14 @@ Hooks.once("ready", () => {
       if (item.type === "class") lastKnownClassLevels.set(item.id, item.system.levels);
     }
   }
+
+  // Fetching the compendium classes is asynchronous, so a sheet opened while it is in flight draws
+  // its panel without the fallback limits. Re-render whatever is open once they are in.
+  loadOfficialClassTargets().then(() => {
+    for (const actor of game.actors) {
+      if (actor.sheet?.rendered) actor.sheet.render(false);
+    }
+  });
 });
 
 /**
@@ -590,20 +598,80 @@ function checkSecondaryClassAsiOverlap(actor, item, baseClass) {
 
 const SPELL_PANEL_CLASS = "gestalt-spell-counts";
 
+/** Which ScaleValue identifier carries each count's limit. */
+const SPELL_TARGET_KEYS = { cantrips: "cantrips-known", prepared: "max-prepared" };
+
+const OFFICIAL_CLASS_PACK = "dnd5e.classes24";
+
 /**
- * Read a class item's spell-count targets. The 2024 classes publish both numbers as ScaleValue
- * advancements, so they are read from the class rather than kept as a table here: Wizard's prepared
- * count reaches 25 where every other full caster stops at 22, and Paladin and Ranger have no cantrip
- * entry at all, which a hardcoded table would get wrong.
+ * The same limits read off dnd5e's own class compendium, keyed by class identifier, as
+ * `{ cantrips: ScaleValueAdvancement, prepared: ScaleValueAdvancement }`. Filled once at ready.
+ * @type {Map<string, object>}
+ */
+const officialClassTargets = new Map();
+
+/**
+ * Load the compendium classes' limits into `officialClassTargets`.
+ *
+ * Twelve documents, fetched once. The index cannot serve this: advancements are not index fields.
+ * A pack that is absent or unreadable leaves the map empty, and every class then falls back to
+ * publishing no target, which is the behaviour from before this existed.
+ * @returns {Promise<void>}
+ */
+async function loadOfficialClassTargets() {
+  const pack = game.packs.get(OFFICIAL_CLASS_PACK);
+  if (!pack) return;
+  let classes;
+  try {
+    classes = await pack.getDocuments({ type: "class" });
+  } catch (error) {
+    console.error(`${MODULE_ID} | Could not read ${OFFICIAL_CLASS_PACK}.`, error);
+    return;
+  }
+  for (const cls of classes) {
+    const identifier = cls.system?.identifier;
+    if (!identifier) continue;
+    const found = {};
+    for (const advancement of cls.advancement?.byType?.ScaleValue ?? []) {
+      for (const [key, scaleId] of Object.entries(SPELL_TARGET_KEYS)) {
+        if (advancement.identifier === scaleId) found[key] = advancement;
+      }
+    }
+    if (Object.keys(found).length) officialClassTargets.set(identifier, found);
+  }
+}
+
+/**
+ * Read a class item's spell-count targets, falling back to the official class of the same identifier
+ * when the class item on the actor does not publish one.
+ *
+ * The 2024 classes publish both numbers as ScaleValue advancements, so they are read from the class
+ * rather than kept as a table here: Wizard's prepared count reaches 25 where every other full caster
+ * stops at 22, and Paladin and Ranger have no cantrip entry at all, which a hardcoded table would get
+ * wrong.
+ *
+ * The fallback exists because a class item does not have to carry those advancements. Plutonium's
+ * importer writes Max Prepared Spells but not Cantrips Known, and a Sorcerer imported that way then
+ * had no cantrip limit at all - so a character who had picked none looked correct while being four
+ * short. Reading dnd5e's own Sorcerer for the number keeps it out of this file and still tells the
+ * player what they owe. `inferred` records which numbers came that way so the panel can say so.
  * @param {Item5e} cls
- * @returns {{prepared: number|null, cantrips: number|null}}
+ * @returns {{prepared: number|null, cantrips: number|null, inferred: Record<string, boolean>}}
  */
 function spellTargetsForClass(cls) {
-  const read = identifier => {
-    const value = cls.scaleValues?.[identifier]?.value;
-    return Number.isFinite(value) ? value : null;
-  };
-  return { prepared: read("max-prepared"), cantrips: read("cantrips-known") };
+  const official = officialClassTargets.get(cls.system?.identifier);
+  const targets = { inferred: {} };
+  for (const [key, scaleId] of Object.entries(SPELL_TARGET_KEYS)) {
+    const own = cls.scaleValues?.[scaleId]?.value;
+    if (Number.isFinite(own)) {
+      targets[key] = own;
+      continue;
+    }
+    const borrowed = official?.[key]?.valueForLevel(cls.system.levels)?.value;
+    targets[key] = Number.isFinite(borrowed) ? borrowed : null;
+    targets.inferred[key] = targets[key] !== null;
+  }
+  return targets;
 }
 
 /**
@@ -750,12 +818,10 @@ function buildSpellCountPanel(tally) {
     for (const [key, labelKey] of [["cantrips", "Cantrips"], ["prepared", "Prepared"]]) {
       const target = row[key];
       const has = row.has[key];
-      // A class that publishes no target still shows its tally, with no denominator, whenever there
-      // is something to show. Skipping the group outright made a class item missing the advancement
-      // look like the module was not counting at all: Plutonium's class importer writes
-      // Max Prepared Spells but no Cantrips Known, so a Sorcerer imported that way lost its cantrip
-      // line entirely. The `has` check is what keeps Paladin and Ranger quiet - they publish no
-      // cantrip target because they have no cantrips, and a row reading "cantrips 0" is noise.
+      // No target and nothing counted means there is nothing to say: that is Paladin and Ranger,
+      // which publish no cantrip limit because they have no cantrips, and dnd5e's own class has none
+      // either so the fallback finds nothing. Everything else shows, including a zero - a Sorcerer
+      // who has picked no cantrips is the case most worth flagging, not the one to hide.
       if ((target === null) && !has) continue;
       const group = document.createElement("span");
       group.classList.add("gestalt-spell-count");
@@ -764,7 +830,15 @@ function buildSpellCountPanel(tally) {
       if (target === null) {
         value.classList.add("gestalt-spell-untargeted");
         group.dataset.tooltip = game.i18n.format(`GESTALT.SpellCounts.NoTarget${labelKey}`, { name: row.name });
-      } else if (has !== target) value.classList.add("gestalt-spell-mismatch");
+      } else {
+        if (has !== target) value.classList.add("gestalt-spell-mismatch");
+        // A borrowed limit is marked, because it is the official class's number rather than this
+        // class item's own, and the two can differ on homebrew.
+        if (row.inferred[key]) {
+          value.classList.add("gestalt-spell-inferred");
+          group.dataset.tooltip = game.i18n.format(`GESTALT.SpellCounts.Inferred${labelKey}`, { name: row.name });
+        }
+      }
       line.append(group);
     }
 

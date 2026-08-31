@@ -98,8 +98,9 @@ coloured. Targets are read from each class's own progression, so they are whatev
 rather than a table kept in this module.
 
 A class item that carries no limit for a count - some third-party importers write Max Prepared Spells
-but not Cantrips Known - gets the count with no denominator and a tooltip naming the scale value to
-add. Classes with no cantrips at all, Paladin and Ranger, show no cantrip line.
+but not Cantrips Known - borrows it from the official class of the same name in dnd5e's compendium,
+marked with a dotted underline and a tooltip. Where even that has no limit, as with Paladin and Ranger
+cantrips, nothing is shown.
 
 **Prepared means actually prepared.** A spell sitting on the sheet unprepared is one the character
 knows, not one they have prepared, and it does not count.
