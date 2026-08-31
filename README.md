@@ -103,6 +103,21 @@ expertise needs proficiency first, or not one of the step's options. The gate is
 what the character has from its picker, and clicking a row drives that same picker - so no choice here
 bypasses the system's rules. Picks made earlier in the same level-up show up immediately.
 
+### Filling in missing spell sources
+
+dnd5e prints the granting class or subclass beside a spell's components, "Draconic Sorcery • V, S", on
+its own sheet and on Tidy's. It does that only for spells carrying `system.sourceItem`, which dnd5e
+fills in when it creates or grants the spell. A spell added by a third-party importer usually has
+neither that field nor an advancement origin, so it shows its components with nothing beside them.
+
+**Fill in missing spell sources**, in Special Traits under the gestalt checkboxes, works the source out
+from dnd5e's own spell lists and writes that one field. It lists every change and asks before writing.
+It is a one-off per character, which is why it lives there rather than on the Spells tab.
+
+An always-prepared spell is attributed to a subclass in preference to a class, matching what dnd5e
+records for a grant it applied itself. A spell with more than one possible source is left alone and
+named in the dialog.
+
 ### Spell counts
 
 A panel at the top of a gestalt character's **Spells** tab shows, per spellcasting class, how many

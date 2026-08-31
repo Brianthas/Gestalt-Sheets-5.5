@@ -3,6 +3,25 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [1.4.0] - 2026-08-31
+
+### Added
+- **Fill in missing spell sources**, a button in Special Traits beside the gestalt checkboxes. dnd5e
+  prints the granting class or subclass next to a spell's components - "Draconic Sorcery • V, S" -
+  but only when the spell carries `system.sourceItem`. A spell added by a third-party importer
+  carries neither that nor an advancement origin, so it shows its components alone. The button works
+  the source out from dnd5e's own spell lists and writes that one field, after listing every change
+  and asking.
+
+  Where the spell has no compendium source to look up - which is the case for every imported spell
+  tested here - it is matched by name against dnd5e's spell compendia, then handed to the same
+  registry dnd5e uses.
+
+  An always-prepared spell prefers a subclass over a class, because that is what it is: Command sits
+  on the bard, cleric, paladin and draconic lists, so attributing it by class would credit a
+  Bard/Sorcerer's Draconic Sorcery grant to the Bard. Anything with more than one candidate is left
+  alone and named, since a wrong label is worse than none.
+
 ## [1.3.1] - 2026-08-30
 
 ### Fixed

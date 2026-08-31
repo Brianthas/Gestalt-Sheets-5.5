@@ -269,3 +269,52 @@ class picker for spells on two class lists, the uncastable warning, the granted 
 browse-by-class buttons. Supporting Tidy properly means using its API rather than DOM injection,
 because Quadrone renders tab content lazily - `.tidy-tab.spellbook` does not exist until the tab is
 opened, which is after the render hook has run.
+
+## Filling in missing spell sources
+
+dnd5e builds the spell row's subtitle at `dnd5e.mjs:56640`:
+
+```js
+ctx.subtitle = [sourceLabel, item.labels.components.vsm].filterJoin(" • ");
+```
+
+`sourceLabel` comes from `system.sourceItem` resolved through `actor.identifiedItems`, or failing that
+from the `dnd5e.advancementOrigin` flag. Both dnd5e's own sheet and Tidy's render it, so nothing needs
+adding to display it - measured on `CharacterActorSheet`, which printed `Sorcerer • V, S, M` for a
+spell holding `class:sorcerer`.
+
+A spell with neither field prints its components alone. Every always-prepared spell on the imported
+gestalt characters here was in that state, while the same Draconic Sorcery grants applied through
+dnd5e's own advancement carried `sourceItem: "subclass:draconic"` and an `advancementOrigin`.
+
+### The rule the button applies
+
+It re-runs `SpellData#_preCreate` (`dnd5e.mjs:22631`) with two additions.
+
+**Identifying the spell.** dnd5e looks the spell up by `_stats.compendiumSource`. Imported spells have
+none, so the name is used as a fallback key into `dnd5e.spells24` and `dnd5e.spells`, and the resulting
+UUID goes to the same `dnd5e.registry.spellLists.forSpell` registry.
+
+**Preferring a subclass for an always-prepared spell.** Attributing by class is wrong for grants:
+Command is on the bard, cleric, paladin and draconic lists, so a Bard/Sorcerer's Draconic Sorcery grant
+would be credited to the Bard. `forSpell` returns `metadata.type` of `class` or `subclass`, so the two
+are separated and a `prepared === 2` spell takes the subclass match.
+
+Matching a subclass list to the actor's subclass item cannot rely on the identifier alone. The
+registered list is `draconic`, while the imported subclass item identifies itself `draconic-sorcery`.
+The list's `name` is "Draconic Sorcery", which equals the item's name, so identifier or name matching
+resolves it either way.
+
+Anything with more than one candidate is skipped and named. A wrong attribution is worse than none,
+and it is not visible afterwards without reading the field.
+
+### Checked
+
+On a copy of the imported Bard/Sorcerer, all four unattributed spells resolved to Draconic Sorcery,
+including Command, and the base sheet then rendered `Draconic Sorcery • V, S, M`. Tidy's sheet shows
+the same, because it is the same field. The QA actor's Animal Friendship, on no list its classes use,
+was left alone with a notification rather than guessed at.
+
+The button is gated on `isGestaltActor` and ownership. It deliberately ignores the sheet's play/edit
+lock that greys the checkboxes beside it: that lock guards against a stray click changing a stat, and
+this is a button that states what it will do and asks first.

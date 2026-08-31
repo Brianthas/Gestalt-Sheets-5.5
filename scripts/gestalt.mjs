@@ -1264,3 +1264,211 @@ function renderSkillOverview(flow, element) {
 }
 
 Hooks.on("renderTraitFlow", renderSkillOverview);
+
+/* -------------------------------------------- */
+/*  Spell source repair                         */
+/* -------------------------------------------- */
+
+const SPELL_SOURCE_BUTTON_CLASS = "gestalt-spell-source-fix";
+
+/** Spell compendia searched by name when a spell carries no compendium source. 2024 first. */
+const SPELL_SOURCE_PACKS = ["dnd5e.spells24", "dnd5e.spells"];
+
+/**
+ * The spell lists a spell appears on, as `{ identifier, name, type }`.
+ *
+ * dnd5e's own attribution (`SpellData#_preCreate`) looks the spell up by `_stats.compendiumSource`.
+ * A spell created by a third-party importer often has none - every always-prepared spell on the
+ * gestalt characters here is in that state - so the name is used as a fallback key into dnd5e's own
+ * spell compendia. That is a lookup of the same registry by a different handle, not a guess about
+ * which class the spell belongs to.
+ * @param {Item5e} spell
+ * @param {Map<string, string>} byName  Lowercased spell name to compendium UUID.
+ * @returns {object[]}
+ */
+function spellListsFor(spell, byName) {
+  const uuid = spell._stats?.compendiumSource ?? byName.get(spell.name.toLowerCase());
+  if (!uuid) return [];
+  return Array.from(dnd5e.registry?.spellLists?.forSpell(uuid) ?? [])
+    .map(list => ({
+      identifier: list?.metadata?.identifier,
+      name: list?.name,
+      type: list?.metadata?.type
+    }))
+    .filter(list => list.identifier);
+}
+
+/**
+ * Build the name to UUID map used when a spell has no compendium source.
+ * @returns {Promise<Map<string, string>>}
+ */
+async function spellUuidsByName() {
+  const byName = new Map();
+  // Reversed so the 2024 pack, listed first, wins: it is the one the spell lists are registered for.
+  for (const key of [...SPELL_SOURCE_PACKS].reverse()) {
+    const pack = game.packs.get(key);
+    if (!pack) continue;
+    for (const entry of await pack.getIndex()) {
+      byName.set(entry.name.toLowerCase(), `Compendium.${key}.Item.${entry._id}`);
+    }
+  }
+  return byName;
+}
+
+/**
+ * Work out what each unattributed spell should point at, without writing anything.
+ *
+ * A subclass is preferred over a class for an always-prepared spell, because that is what the spell
+ * is: dnd5e records `subclass:draconic` on a Draconic Sorcery grant it applied itself. Preferring the
+ * class instead gets it wrong - Command is on the bard, cleric, paladin and draconic lists, so a
+ * Bard/Sorcerer would have their Draconic Sorcery grant attributed to Bard.
+ *
+ * Anything with more than one candidate is left alone and reported. A wrong label is worse than none.
+ * @param {Actor5e} actor
+ * @returns {Promise<{updates: object[], planned: object[], skipped: object[]}>}
+ */
+async function planSpellSourceRepairs(actor) {
+  const unattributed = actor.itemTypes.spell.filter(spell => !spell.system.sourceItem
+    && !["atwill", "innate"].includes(spell.system.method));
+  if (!unattributed.length) return { updates: [], planned: [], skipped: [] };
+
+  const byName = await spellUuidsByName();
+  const classes = Object.keys(actor.spellcastingClasses ?? {});
+  const subclasses = actor.itemTypes.subclass;
+  const updates = [];
+  const planned = [];
+  const skipped = [];
+
+  for (const spell of unattributed) {
+    const lists = spellListsFor(spell, byName);
+    if (!lists.length) {
+      skipped.push({ spell, reason: game.i18n.localize("GESTALT.SpellSource.Reason.NoList") });
+      continue;
+    }
+
+    const subclassHits = subclasses.filter(sub => lists.some(list => (list.type === "subclass")
+      && ((list.identifier === sub.system.identifier)
+        // Plutonium names the subclass item "Draconic Sorcery" but identifies it "draconic-sorcery",
+        // where the registered list is "draconic". The list's own name is the reliable join.
+        || (list.name?.toLowerCase() === sub.name.toLowerCase()))));
+    const classHits = classes.filter(id => lists.some(list => (list.type === "class") && (list.identifier === id)));
+
+    const always = spell.system.prepared === CONFIG.DND5E.spellPreparationStates.always.value;
+    let target = null;
+    if (always && (subclassHits.length === 1)) target = { item: subclassHits[0], key: `subclass:${subclassHits[0].system.identifier}` };
+    else if (classHits.length === 1) target = { item: actor.classes[classHits[0]], key: `class:${classHits[0]}` };
+
+    if (!target) {
+      const candidates = [...subclassHits.map(s => s.name), ...classHits.map(c => actor.classes[c]?.name ?? c)];
+      skipped.push({
+        spell,
+        reason: candidates.length
+          ? game.i18n.format("GESTALT.SpellSource.Reason.Ambiguous", { names: candidates.join(", ") })
+          : game.i18n.localize("GESTALT.SpellSource.Reason.NoMatch")
+      });
+      continue;
+    }
+
+    updates.push({ _id: spell.id, "system.sourceItem": target.key });
+    planned.push({ spell, label: target.item?.name ?? target.key });
+  }
+
+  return { updates, planned, skipped };
+}
+
+/**
+ * Ask, then write. The dialog lists every spell that would change and what it would be attributed to,
+ * because this edits documents and a wrong attribution is not obvious afterwards.
+ * @param {Actor5e} actor
+ * @returns {Promise<void>}
+ */
+async function repairSpellSources(actor) {
+  const { updates, planned, skipped } = await planSpellSourceRepairs(actor);
+
+  if (!updates.length) {
+    const message = skipped.length
+      ? game.i18n.format("GESTALT.SpellSource.NoneResolvable", { count: skipped.length })
+      : game.i18n.localize("GESTALT.SpellSource.NothingToDo");
+    notifyGestalt("info", message);
+    return;
+  }
+
+  const lines = planned.map(p => `<li><strong>${foundry.utils.escapeHTML(p.spell.name)}</strong> &rarr; `
+    + `${foundry.utils.escapeHTML(p.label)}</li>`).join("");
+  const skippedLines = skipped.map(s => `<li>${foundry.utils.escapeHTML(s.spell.name)} - ${s.reason}</li>`).join("");
+
+  const confirmed = await foundry.applications.api.DialogV2.confirm({
+    window: { title: game.i18n.localize("GESTALT.SpellSource.Title") },
+    content: `<p>${game.i18n.format("GESTALT.SpellSource.Confirm", { count: updates.length })}</p>`
+      + `<ul>${lines}</ul>`
+      + (skippedLines ? `<p>${game.i18n.localize("GESTALT.SpellSource.SkippedHeading")}</p><ul>${skippedLines}</ul>` : ""),
+    rejectClose: false,
+    modal: true
+  });
+  if (!confirmed) return;
+
+  await actor.updateEmbeddedDocuments("Item", updates);
+
+  // Report what the documents actually hold now, not what was sent.
+  const written = updates.filter(u => actor.items.get(u._id)?.system.sourceItem === u["system.sourceItem"]).length;
+  notifyGestalt(written === updates.length ? "info" : "warn",
+    game.i18n.format("GESTALT.SpellSource.Done", { written, total: updates.length }));
+}
+
+/**
+ * Put the repair button in the Special Traits tab, in the module's own section beside its checkboxes.
+ *
+ * Filling in spell sources is a one-off per character, so it does not earn permanent space on the
+ * Spells tab. The button is anchored to the gestalt flag input rather than to the section's heading,
+ * because the heading is a localised string and the flag name is not.
+ * @param {ActorSheet} sheet
+ * @param {HTMLElement|jQuery} element
+ */
+function renderSpellSourceButton(sheet, element) {
+  try {
+    const root = element?.jquery ? element[0] : element;
+    if (!root?.querySelectorAll) return;
+
+    for (const stale of root.querySelectorAll(`.${SPELL_SOURCE_BUTTON_CLASS}`)) stale.remove();
+
+    const actor = sheet?.document ?? sheet?.actor;
+    if (actor?.type !== "character") return;
+    if (!isGestaltActor(actor)) return;
+
+    const flagInput = root.querySelector(`[name="flags.dnd5e.${GESTALT_FLAG.ENABLED}"]`);
+    const fieldset = flagInput?.closest("fieldset");
+    if (!fieldset) return;
+
+    const group = document.createElement("div");
+    group.classList.add("form-group", SPELL_SOURCE_BUTTON_CLASS);
+
+    const label = document.createElement("label");
+    label.textContent = game.i18n.localize("GESTALT.SpellSource.Label");
+    group.append(label);
+
+    const fields = document.createElement("div");
+    fields.classList.add("form-fields");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = game.i18n.localize("GESTALT.SpellSource.Action");
+    // Ownership only, not the sheet's play/edit lock that greys the checkboxes beside it. That lock
+    // stops a stray click changing a stat; this is a button that states what it will do and asks
+    // first, and making it need a mode switch would only hide a one-off action behind a step.
+    button.disabled = !actor.isOwner;
+    button.addEventListener("click", () => repairSpellSources(actor));
+    fields.append(button);
+    group.append(fields);
+
+    const hint = document.createElement("p");
+    hint.classList.add("hint");
+    hint.textContent = game.i18n.localize("GESTALT.SpellSource.Hint");
+    group.append(hint);
+
+    fieldset.append(group);
+  } catch (err) {
+    console.error(`${MODULE_ID} | Could not add the spell source button to this sheet. The rest of the `
+      + "sheet is unaffected.", err);
+  }
+}
+
+Hooks.on("renderActorSheetV2", renderSpellSourceButton);
