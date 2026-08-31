@@ -3,6 +3,24 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [1.3.0] - 2026-08-30
+
+### Added
+- **Skill proficiency overview in advancement.** A Trait advancement step that chooses skills now
+  lists all eighteen skills with what the character already has: one tick proficient, two expertise,
+  a half-filled circle for the half proficiency Jack of All Trades gives. dnd5e's own picker lists
+  only what is still legal to choose, so on a gestalt character taking two classes' worth of skills
+  there was no way to see the overlap while deciding.
+
+  A row you cannot pick is greyed with a tooltip saying why: already proficient, already expertise,
+  expertise needs proficiency first, or not in this class's list. The gate is dnd5e's own - the
+  system removes what the character has from its picker, and the greyed row reflects that rather
+  than adding a second rule. Clicking a row drives that same picker, so every choice still goes
+  through `TraitAdvancement#apply`.
+
+  The list reads the advancement manager's clone, so picks made earlier in the same level-up appear
+  immediately. Only gestalt-enabled characters get it.
+
 ## [1.2.3] - 2026-08-30
 
 ### Fixed

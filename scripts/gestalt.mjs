@@ -1025,3 +1025,206 @@ function renderSpellCountPanel(sheet, element) {
       + "sheet is unaffected; this is usually a sheet module laying out the Spells tab differently.", err);
   }
 }
+
+/* -------------------------------------------- */
+/*  Skill proficiency overview                  */
+/* -------------------------------------------- */
+
+const SKILL_PANEL_CLASS = "gestalt-skill-overview";
+
+/**
+ * How a proficiency multiplier is marked. dnd5e stores `system.skills.<key>.value` as 0, 0.5, 1 or 2,
+ * and the icons follow what a player already reads on the sheet: one tick proficient, two expertise,
+ * a half-filled circle for the half proficiency Jack of All Trades gives.
+ */
+const SKILL_STATES = {
+  2: { label: "Expertise", icon: "fa-solid fa-check-double" },
+  1: { label: "Proficient", icon: "fa-solid fa-check" },
+  0.5: { label: "Half", icon: "fa-solid fa-circle-half-stroke" }
+};
+
+/**
+ * Whether a Trait advancement is choosing skills, from the keys it actually offers.
+ *
+ * `configuration.type` does not exist on this advancement in dnd5e 5.3.3 - the trait family is
+ * carried in the key prefixes instead, so a pool of `skills:*` or `skills:acr` is what identifies it.
+ * @param {Advancement} advancement
+ * @returns {boolean}
+ */
+function isSkillTraitAdvancement(advancement) {
+  const keys = [
+    ...(advancement.configuration?.grants ?? []),
+    ...(advancement.configuration?.choices ?? []).flatMap(c => Array.from(c.pool ?? []))
+  ];
+  return (keys.length > 0) && keys.every(key => key.startsWith("skills"));
+}
+
+/**
+ * Every skill this advancement could offer, as skill keys. `skills:*` means all of them.
+ * @param {Advancement} advancement
+ * @returns {Set<string>}
+ */
+function skillPoolFor(advancement) {
+  const pool = new Set();
+  for (const choice of advancement.configuration?.choices ?? []) {
+    for (const key of choice.pool ?? []) {
+      if (key === "skills:*") return new Set(Object.keys(CONFIG.DND5E.skills));
+      const [, skill] = key.split(":");
+      if (skill) pool.add(skill);
+    }
+  }
+  return pool;
+}
+
+/**
+ * Why a skill cannot be picked in this step, as a localised string, or null when it can.
+ *
+ * dnd5e removes anything the character already has from the select before rendering it
+ * (`TraitAdvancement#unfulfilledChoices` excludes `selected.actor`), so an absent option is the
+ * system's own gate rather than this module's. The reason is worked out here only to say why the row
+ * is greyed, which a select cannot express by leaving the option out.
+ * @param {object} context
+ * @param {boolean} context.offered   Whether dnd5e is still offering this skill.
+ * @param {boolean} context.inPool    Whether the advancement's pool contains it at all.
+ * @param {number} context.value      The character's current proficiency multiplier.
+ * @param {string} context.mode       The advancement's trait mode.
+ * @param {boolean} context.complete  Whether the step has any picks left.
+ * @returns {string|null}
+ */
+function skillBlockedReason({ offered, inPool, value, mode, complete }) {
+  if (offered) return null;
+  if (mode === "expertise") {
+    if (value >= 2) return game.i18n.localize("GESTALT.Skills.Blocked.AlreadyExpertise");
+    if (complete) return null;
+    if (value < 1) return game.i18n.localize("GESTALT.Skills.Blocked.NeedsProficiency");
+  } else {
+    if (value >= 1) return game.i18n.localize("GESTALT.Skills.Blocked.AlreadyProficient");
+    // Once every pick is spent dnd5e offers nothing, and saying each remaining skill is "unavailable"
+    // would read as a restriction rather than as the step simply being finished.
+    if (complete) return null;
+  }
+  if (!inPool) return game.i18n.localize("GESTALT.Skills.Blocked.NotOffered");
+  return game.i18n.localize("GESTALT.Skills.Blocked.Unavailable");
+}
+
+/**
+ * Build the overview: every skill, its current state, and whether this step can still grant it.
+ * @param {Advancement} advancement        The advancement being flowed. Its actor is the manager's
+ *                                         clone, so picks made earlier in the same run are included.
+ * @param {HTMLSelectElement|null} select  dnd5e's own trait picker, absent once all picks are made.
+ * @returns {HTMLElement}
+ */
+function buildSkillOverview(advancement, select) {
+  const actor = advancement.actor;
+  const mode = advancement.configuration?.mode ?? "default";
+  const offeredKeys = new Set(Array.from(select?.options ?? []).map(o => o.value).filter(Boolean));
+  const pool = skillPoolFor(advancement);
+  // dnd5e drops the picker entirely once every choice is spent, so an empty offer set is the step
+  // being finished rather than every skill being forbidden.
+  const complete = offeredKeys.size === 0;
+
+  const panel = document.createElement("section");
+  panel.classList.add(SKILL_PANEL_CLASS);
+
+  const title = document.createElement("h4");
+  title.textContent = game.i18n.localize("GESTALT.Skills.Title");
+  panel.append(title);
+
+  const list = document.createElement("div");
+  list.classList.add("gestalt-skill-list");
+  panel.append(list);
+
+  const skills = Object.entries(CONFIG.DND5E.skills)
+    .map(([key, config]) => ({ key, label: config.label, ability: config.ability }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  for (const skill of skills) {
+    const value = actor.system.skills?.[skill.key]?.value ?? 0;
+    const offered = offeredKeys.has(`skills:${skill.key}`);
+    const blocked = skillBlockedReason({ offered, inPool: pool.has(skill.key), value, mode, complete });
+
+    // A button rather than a div, so the row is reachable by keyboard and `disabled` does the gating
+    // instead of a class that only looks disabled.
+    const row = document.createElement("button");
+    row.type = "button";
+    row.classList.add("gestalt-skill-row");
+    row.dataset.skill = skill.key;
+    row.disabled = !offered;
+    if (blocked) row.dataset.tooltip = blocked;
+
+    const name = document.createElement("span");
+    name.classList.add("gestalt-skill-name");
+    name.textContent = skill.label;
+    row.append(name);
+
+    const ability = CONFIG.DND5E.abilities[skill.ability]?.abbreviation;
+    if (ability) {
+      const abbr = document.createElement("span");
+      abbr.classList.add("gestalt-skill-ability");
+      abbr.textContent = ability.toUpperCase();
+      row.append(abbr);
+    }
+
+    const state = SKILL_STATES[value];
+    const mark = document.createElement("span");
+    mark.classList.add("gestalt-skill-mark");
+    if (state) {
+      const stateLabel = game.i18n.localize(`GESTALT.Skills.State.${state.label}`);
+      mark.classList.add(`gestalt-skill-${state.label.toLowerCase()}`);
+      const icon = document.createElement("i");
+      icon.className = state.icon;
+      icon.setAttribute("inert", "");
+      mark.append(icon);
+      mark.setAttribute("aria-label", stateLabel);
+      if (!blocked) mark.dataset.tooltip = stateLabel;
+    }
+    row.append(mark);
+
+    list.append(row);
+  }
+
+  // Picking a row drives dnd5e's own select rather than writing the choice directly: the change event
+  // reaches `TraitFlow#_handleForm`, which calls `advancement.apply`. Nothing here duplicates the
+  // system's rules about what a pick is allowed to be.
+  if (select) list.addEventListener("click", event => {
+    const row = event.target.closest(".gestalt-skill-row");
+    if (!row || row.disabled) return;
+    event.preventDefault();
+    select.value = `skills:${row.dataset.skill}`;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
+  return panel;
+}
+
+/**
+ * Add the skill overview to a Trait advancement step that is choosing skills.
+ *
+ * A gestalt character takes two classes' worth of skill choices, so the same skill is offered twice
+ * and the overlap is easy to lose track of: Bard and Rogue between them hand out eight proficiencies
+ * and four expertises. dnd5e's step shows only the skills still legal to pick and says nothing about
+ * what the character already has, which is the part worth seeing while deciding.
+ * @param {AdvancementFlow} flow
+ * @param {HTMLElement|jQuery} element
+ */
+function renderSkillOverview(flow, element) {
+  try {
+    const root = element?.jquery ? element[0] : element;
+    if (!root?.querySelector) return;
+
+    // The flow re-renders in place after every pick, so clear our own previous panel first.
+    for (const stale of root.querySelectorAll(`.${SKILL_PANEL_CLASS}`)) stale.remove();
+
+    const advancement = flow?.advancement;
+    if (!advancement || !isSkillTraitAdvancement(advancement)) return;
+    if (!isGestaltActor(advancement.actor)) return;
+
+    const content = root.querySelector('[data-application-part="content"]') ?? root;
+    content.append(buildSkillOverview(advancement, root.querySelector('select[name="added"]')));
+  } catch (err) {
+    console.error(`${MODULE_ID} | Could not add the skill overview to this advancement step. The step `
+      + "itself is unaffected.", err);
+  }
+}
+
+Hooks.on("renderTraitFlow", renderSkillOverview);

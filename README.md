@@ -90,6 +90,19 @@ overridden level exactly as set.
 Doubling raises the maximum only, so slots already spent stay spent and the new total appears on the
 next long rest.
 
+### Skill proficiencies during advancement
+
+An advancement step that chooses skills lists all eighteen with what the character already has: one
+tick proficient, two expertise, a half-filled circle for the half proficiency Jack of All Trades gives.
+dnd5e's own picker offers only what is still legal to choose, which on a gestalt character taking two
+classes' worth of skills leaves no way to see the overlap while deciding. Bard and Rogue between them
+hand out eight proficiencies and four expertises.
+
+A row you cannot pick is greyed, with a tooltip saying why: already proficient, already expertise,
+expertise needs proficiency first, or not in this class's list. The gate is dnd5e's own - it removes
+what the character has from its picker, and clicking a row drives that same picker - so no choice here
+bypasses the system's rules. Picks made earlier in the same level-up show up immediately.
+
 ### Spell counts
 
 A panel at the top of a gestalt character's **Spells** tab shows, per spellcasting class, how many
@@ -189,3 +202,4 @@ Actively tested in a live game. Verified on Foundry core v13 and v14, and dnd5e 
 - [CHANGELOG.md](CHANGELOG.md) - version-by-version history
 - [docs/design-notes.md](docs/design-notes.md) - why the module works the way it does
 - [docs/spell-counts.md](docs/spell-counts.md) - engineering record for the spell count panel
+- [docs/skill-overview.md](docs/skill-overview.md) - engineering record for the advancement skill list
