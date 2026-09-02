@@ -3,6 +3,14 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [1.4.2] - 2026-09-02
+
+### Changed
+- Comments, docs and earlier changelog entries now describe third-party content importers generically
+  rather than naming one. No functional change: the module behaves identically, and the reasons a
+  class item may lack a Cantrips Known advancement, or a subclass identifier may not match its
+  registered spell list, are documented exactly as before.
+
 ## [1.4.1] - 2026-08-31
 
 ### Fixed
