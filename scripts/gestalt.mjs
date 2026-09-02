@@ -684,9 +684,9 @@ async function loadOfficialClassTargets() {
  * stops at 22, and Paladin and Ranger have no cantrip entry at all, which a hardcoded table would get
  * wrong.
  *
- * The fallback exists because a class item does not have to carry those advancements. Plutonium's
- * importer writes Max Prepared Spells but not Cantrips Known, and a Sorcerer imported that way then
- * had no cantrip limit at all - so a character who had picked none looked correct while being four
+ * The fallback exists because a class item does not have to carry those advancements. A third-party
+ * importer may write Max Prepared Spells but not Cantrips Known, and a Sorcerer imported that way
+ * then had no cantrip limit at all - so a character who had picked none looked correct while being four
  * short. Reading dnd5e's own Sorcerer for the number keeps it out of this file and still tells the
  * player what they owe. `inferred` records which numbers came that way so the panel can say so.
  * @param {Item5e} cls
@@ -1383,8 +1383,9 @@ async function planSpellSourceRepairs(actor) {
 
     const subclassHits = subclasses.filter(sub => lists.some(list => (list.type === "subclass")
       && ((list.identifier === sub.system.identifier)
-        // Plutonium names the subclass item "Draconic Sorcery" but identifies it "draconic-sorcery",
-        // where the registered list is "draconic". The list's own name is the reliable join.
+        // An importer may name the subclass item "Draconic Sorcery" but identify it
+        // "draconic-sorcery", where the registered list is "draconic". The list's own name is the
+        // reliable join.
         || (list.name?.toLowerCase() === sub.name.toLowerCase()))));
     const classHits = classes.filter(id => lists.some(list => (list.type === "class") && (list.identifier === id)));
 

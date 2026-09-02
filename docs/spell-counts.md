@@ -39,7 +39,7 @@ nothing else, so there is no second field to fall back on when the advancement i
 advancement's key is `configuration.identifier` or, when that is blank as it is in the official
 compendium classes, the slugified title, so "Cantrips Known" keys as `cantrips-known` either way.
 
-A class item does not have to carry these advancements. Plutonium's importer writes Max Prepared
+A class item does not have to carry these advancements. A third-party importer may write Max Prepared
 Spells but not Cantrips Known, so a Sorcerer imported that way publishes no cantrip limit. Any limit
 the class item does not publish is read from the official class of the same `system.identifier` in
 `dnd5e.classes24`, at that class's level, and marked in the panel as borrowed.
@@ -55,7 +55,7 @@ and Ranger quiet: dnd5e's own Paladin has no cantrip limit to borrow, and a Pala
 count.
 
 1.2.2 got this wrong by applying the above-zero condition to every missing limit, including ones that
-could have been borrowed. A Plutonium Sorcerer 3 with no cantrips chosen then showed no cantrip line
+could have been borrowed. An imported Sorcerer 3 with no cantrips chosen then showed no cantrip line
 while being four short - the same symptom the panel exists to catch.
 
 The 2024 Wizard exposes no spellbook size, so the panel has no spellbook row.

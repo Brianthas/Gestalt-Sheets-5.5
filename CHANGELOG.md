@@ -74,7 +74,7 @@ All notable changes to this module are documented here. Versions follow the modu
 ### Fixed
 - A missing limit is now filled from dnd5e's own class compendium instead of leaving the count
   unbounded. 1.2.2 showed such a count without a denominator, but only when it was above zero, which
-  left the worst case silent: a Sorcerer 3 imported by Plutonium, with no Cantrips Known advancement
+  left the worst case silent: an externally imported Sorcerer 3, with no Cantrips Known advancement
   and no cantrips picked, still showed no cantrip line at all while being four short. The panel now
   reads the official class of the same identifier for any limit the class item does not publish, and
   marks the borrowed number with a dotted underline and a tooltip saying where it came from.
@@ -87,8 +87,8 @@ All notable changes to this module are documented here. Versions follow the modu
 - A class that publishes no limit for a count no longer hides that count. The panel reads the cantrip
   and prepared limits from the class item's `cantrips-known` and `max-prepared` scale values, which is
   the only place dnd5e records them: the class spellcasting schema has just `preparation.formula`.
-  Plutonium's class importer writes Max Prepared Spells but not Cantrips Known, so a Sorcerer imported
-  that way lost its cantrip line entirely and looked like the module was not counting cantrips. Such a
+  A third-party class importer may write Max Prepared Spells but not Cantrips Known, so a Sorcerer
+  imported that way lost its cantrip line entirely and looked like the module was not counting. Such a
   count now shows with no denominator (`cantrips 5`) and a tooltip naming the missing scale value.
   A class that publishes no limit because it has none - Paladin, Ranger - still shows nothing, since
   the count is only rendered when it is above zero.

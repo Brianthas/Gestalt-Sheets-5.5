@@ -129,6 +129,6 @@ the element scrolls, which is what proves the cap is a bound rather than a clip.
 
 What a full pass covers: every class in both packs (57 and 52 Trait steps, 13 and 13 with skill keys,
 one panel each and none on the rest); the four mixed backgrounds; the two grants-only species; the
-Skilled feat; a Plutonium-imported class with a six-key explicit pool; picking and removing through
+Skilled feat; an externally imported class with a six-key explicit pool; picking and removing through
 the panel; `forLevelChange` reaching Rogue's level 6 Expertise; the non-gestalt and module-off gates;
 and two extra renders producing one panel rather than three.
