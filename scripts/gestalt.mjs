@@ -1445,11 +1445,18 @@ async function repairSpellSources(actor) {
     + `${foundry.utils.escapeHTML(p.label)}</li>`).join("");
   const skippedLines = skipped.map(s => `<li>${foundry.utils.escapeHTML(s.spell.name)} - ${s.reason}</li>`).join("");
 
+  // The lists are one row per spell and there is no ceiling on how many that is. Foundry's
+  // `.window-content` is `overflow: hidden`, so an unbounded list is clipped rather than scrolled:
+  // measured at 93 spells, 2259px of content sat in a 1253px box with a thousand pixels of it
+  // unreachable. Since this dialog is asking permission to write, anything it hides is a change
+  // being approved unseen. The scroller is on the lists so the buttons stay put below them.
   const confirmed = await foundry.applications.api.DialogV2.confirm({
     window: { title: game.i18n.localize("GESTALT.SpellSource.Title") },
     content: `<p>${game.i18n.format("GESTALT.SpellSource.Confirm", { count: updates.length })}</p>`
+      + `<div class="gestalt-spell-source-list">`
       + `<ul>${lines}</ul>`
-      + (skippedLines ? `<p>${game.i18n.localize("GESTALT.SpellSource.SkippedHeading")}</p><ul>${skippedLines}</ul>` : ""),
+      + (skippedLines ? `<p>${game.i18n.localize("GESTALT.SpellSource.SkippedHeading")}</p><ul>${skippedLines}</ul>` : "")
+      + `</div>`,
     rejectClose: false,
     modal: true
   });

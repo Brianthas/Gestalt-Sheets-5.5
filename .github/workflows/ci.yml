@@ -13,12 +13,27 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+
+      - name: Install dev dependencies
+        run: npm ci
 
       - name: Check JavaScript syntax
-        run: node --check scripts/gestalt.mjs
+        run: for f in $(find scripts tools -name '*.mjs'); do node --check "$f"; done
+
+      # Lint runs here rather than only on demand: passing locally depends on someone remembering to
+      # run it, and this module had no lint at all until now. eslint handed a directory reads every
+      # file the flat config does not ignore, currently 3, and the run fails on any error.
+      - name: Lint
+        run: npm run lint
 
       - name: Validate module.json
         run: node -e "JSON.parse(require('fs').readFileSync('module.json','utf8')); console.log('module.json OK')"
 
       - name: Validate lang/en.json
         run: node -e "JSON.parse(require('fs').readFileSync('lang/en.json','utf8')); console.log('lang/en.json OK')"
+
+      # A missing localisation key does not throw - Foundry renders the key itself - so nothing above
+      # can catch one.
+      - name: Check localisation keys
+        run: npm run check-lang

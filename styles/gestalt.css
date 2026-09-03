@@ -152,6 +152,16 @@
   font-size: var(--font-size-12, 0.75rem);
 }
 
+/* The spell source confirmation lists one row per spell and has no ceiling on how many. Foundry's
+   `.window-content` is `overflow: hidden`, so without this the list is clipped with no way to reach
+   the rest - and this dialog is asking permission to write, so anything hidden is approved unseen.
+   Half the viewport leaves room for the heading and the buttons below it. */
+.gestalt-spell-source-list {
+  max-height: 50vh;
+  overflow-y: auto;
+  min-height: 0;
+}
+
 /* Skill overview in a Trait advancement step. The advancement window is 460px wide and its content
    is not scrollable, so the list carries its own bounded height. */
 .gestalt-skill-overview {

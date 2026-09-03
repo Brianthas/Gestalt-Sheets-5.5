@@ -3,6 +3,23 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [1.4.3] - 2026-09-03
+
+### Fixed
+- The spell source confirmation could hide most of what it was about to change. It lists one row per
+  spell with no ceiling on how many, and a Foundry window's content does not scroll, so a long list
+  was clipped rather than scrolled. Measured on a character with 93 unattributed spells: 2259px of
+  content inside a 1253px box, leaving about a thousand pixels unreachable. Since the dialog exists to
+  ask permission to write, anything it hid was a change being approved unseen. The list is now capped
+  at half the window height and scrolls, and the buttons stay below it.
+
+### Changed
+- CI lints the module, checks the syntax of `tools/` as well as `scripts/`, and verifies that every
+  localisation key the code asks for exists. There was no lint at all before, and a missing key does
+  not throw - Foundry renders the key itself - so nothing in the previous checks could catch one.
+  `tools/check-lang.mjs` understands keys written out in full and keys built from a template whose
+  values are declared to it; a template it cannot expand fails the run rather than passing quietly.
+
 ## [1.4.2] - 2026-09-02
 
 ### Changed
