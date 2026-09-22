@@ -8,10 +8,10 @@ All notable changes to this module are documented here. Versions follow the modu
 ### Changed
 - Verified on Foundry 14.368 with dnd5e 6.0.4: character level, proficiency, hit points, hit dice,
   doubled spell slots and caster level on the actor data, and the spell count panel and spell source
-  button on both the dnd5e sheet and Tidy 5e 14.1.2. No code change was needed. The advancement-side
-  features (the skill overview during a trait choice, level-up reminders, ASI overlap) were not
-  driven; the dnd5e classes and hooks they rely on are present in 6.0.4. `module.json` now records
-  that version.
+  button on both the dnd5e sheet and Tidy 5e 14.1.2. A Bard 1 / Rogue 1 gestalt was levelled to
+  Bard 2 through dnd5e's Advancement Manager: the skill overview rendered on the Expertise step with
+  the right marks, hit points took the second class's average, and the level-up reminder for the
+  lagging class was whispered. No code change was needed. `module.json` now records that version.
 
 ## [1.4.3] - 2026-09-03
 
