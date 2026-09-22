@@ -3,6 +3,16 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [Unreleased]
+
+### Changed
+- Verified on Foundry 14.368 with dnd5e 6.0.4: character level, proficiency, hit points, hit dice,
+  doubled spell slots and caster level on the actor data, and the spell count panel and spell source
+  button on both the dnd5e sheet and Tidy 5e 14.1.2. No code change was needed. The advancement-side
+  features (the skill overview during a trait choice, level-up reminders, ASI overlap) were not
+  driven; the dnd5e classes and hooks they rely on are present in 6.0.4. `module.json` now records
+  that version.
+
 ## [1.4.3] - 2026-09-03
 
 ### Fixed

@@ -213,7 +213,8 @@ one-way decision.
 
 ## Status
 
-Actively tested in a live game. Verified on Foundry core v13 and v14, and dnd5e 5.2.5 through 5.3.3.
+Actively tested in a live game. Verified on Foundry core v13 with dnd5e 5.2.5 through 5.3.3, and on
+Foundry core v14 with dnd5e 6.0.4.
 
 - [CHANGELOG.md](CHANGELOG.md) - version-by-version history
 - [docs/design-notes.md](docs/design-notes.md) - why the module works the way it does
