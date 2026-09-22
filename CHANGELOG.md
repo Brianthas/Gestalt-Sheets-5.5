@@ -3,7 +3,7 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
-## [Unreleased]
+## [1.4.4] - 2026-09-22
 
 ### Changed
 - Verified on Foundry 14.368 with dnd5e 6.0.4: character level, proficiency, hit points, hit dice,
