@@ -1527,3 +1527,34 @@ function renderSpellSourceButton(sheet, element) {
 }
 
 Hooks.on("renderActorSheetV2", renderSpellSourceButton);
+
+/**
+ * Offer the same action in the sheet's header menu, so sheets without dnd5e's Special Traits fieldset
+ * have it too. Tidy 5e edits special traits in a separate window built without the
+ * `flags.dnd5e.gestaltEnabled` input the button above anchors on, so the button never appeared there.
+ *
+ * Foundry calls `getHeaderControls<Class>` for every class in a window's inheritance chain, and Tidy
+ * builds its menu through the same call, so one handler on `ActorSheetV2` covers both sheets.
+ * `ownership` limits the entry to owners, as the button's disabled state does.
+ * @param {ApplicationV2} sheet
+ * @param {object[]} controls  Header menu entries, mutated in place.
+ */
+function addSpellSourceMenuEntry(sheet, controls) {
+  try {
+    const actor = sheet?.document;
+    if (actor?.type !== "character") return;
+    if (!isGestaltActor(actor)) return;
+
+    controls.push({
+      action: "gestaltSpellSources",
+      icon: "fa-solid fa-book",
+      label: game.i18n.localize("GESTALT.SpellSource.Action"),
+      ownership: "OWNER",
+      onClick: () => repairSpellSources(actor)
+    });
+  } catch (err) {
+    console.error(`${MODULE_ID} | Could not add the spell source entry to this sheet's menu.`, err);
+  }
+}
+
+Hooks.on("getHeaderControlsActorSheetV2", addSpellSourceMenuEntry);

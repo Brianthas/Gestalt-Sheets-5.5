@@ -3,6 +3,24 @@
 All notable changes to this module are documented here. Versions follow the module's `module.json`
 `version` field, which is what Foundry checks to detect an available update.
 
+## [1.4.5] - 2026-10-29
+
+### Fixed
+- **Fill in missing spell sources is available on Tidy 5e.** The button sits in dnd5e's Special Traits
+  fieldset beside the gestalt checkbox. Tidy edits special traits in a separate window built without
+  that checkbox's input, so the button never appeared on Tidy, and the 1.4.4 entry was wrong to list
+  it as verified there. The action is now also in the character sheet's header menu, on gestalt
+  characters, for owners, on both sheets.
+
+### Changed
+- Verified on Foundry 14.369 with dnd5e 6.0.6: character level, proficiency, XP thresholds, hit points,
+  hit dice, caster level and doubled spell slots on five gestalt characters against values worked out
+  independently from their class data; the spell count panel on the dnd5e sheet and Tidy 5e 14.1.2; a
+  Bard 1 / Rogue 1 levelled to Bard 2 through the Advancement Manager, with the skill overview on the
+  Expertise step, hit points of 13 (Bard maximum at level 1 plus its level 2 average) and the level-up
+  reminder for the Rogue; and changing that Expertise choice afterwards through Modify Choices, which
+  dnd5e changed in 6.0.6. `module.json` records that version.
+
 ## [1.4.4] - 2026-09-22
 
 ### Changed

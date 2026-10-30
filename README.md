@@ -110,9 +110,11 @@ its own sheet and on Tidy's. It does that only for spells carrying `system.sourc
 fills in when it creates or grants the spell. A spell added by a third-party importer usually has
 neither that field nor an advancement origin, so it shows its components with nothing beside them.
 
-**Fill in missing spell sources**, in Special Traits under the gestalt checkboxes, works the source out
-from dnd5e's own spell lists and writes that one field. It lists every change and asks before writing.
-It is a one-off per character, which is why it lives there rather than on the Spells tab.
+**Fill in missing spell sources** works the source out from dnd5e's own spell lists and writes that one
+field. It lists every change and asks before writing. It is a one-off per character, which is why it
+lives in Special Traits under the gestalt checkboxes and in the sheet's header menu rather than on the
+Spells tab. Tidy 5e keeps Special Traits in a separate window, so on Tidy it is in the header menu
+only.
 
 A spell is attributed to the class it traces back to, not the feature that granted it, so a Draconic
 Sorcery spell reads "Sorcerer". For an always-prepared spell the subclass is what identifies that
